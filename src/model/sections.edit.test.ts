@@ -66,3 +66,8 @@ describe('splitUntouchedSentences', () => {
     expect(splitUntouchedSentences(out, 3)).toBe(out);
   });
 });
+
+test('old cards without originalText also split', () => {
+  const v = { id: 'v', title: 'T', sections: [{ id: 'a', text: 'Unu doi. Trei.', location: null, done: false, updatedAt: 1 }] } as Video;
+  expect(splitUntouchedSentences(v, 2).sections.map((s) => s.text)).toEqual(['Unu doi.', 'Trei.']);
+});

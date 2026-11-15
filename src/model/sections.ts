@@ -1,5 +1,5 @@
 import type { BrollItem, ParsedVideo, Section, ShotTag, Video } from './types';
-import { splitSentences } from '../import/importModel';
+import { splitSentences, stripSpokenQuotes } from '../import/importModel';
 
 const newId = () => crypto.randomUUID();
 
@@ -136,11 +136,13 @@ export function splitUntouchedSentences(video: Video, now: number): Video {
   video.sections.forEach((s, i) => {
     const prev = video.sections[i - 1];
     const next = video.sections[i + 1];
-    const alone = s.originalText !== undefined && prev?.originalText !== s.originalText && next?.originalText !== s.originalText;
-    const pieces = alone && norm(s.text) === norm(s.originalText!) ? splitSentences(s.text) : [];
+    // older cards may have no originalText at all; they count as untouched one-piece cards
+    const alone = s.originalText === undefined || (prev?.originalText !== s.originalText && next?.originalText !== s.originalText);
+    const untouched = s.originalText === undefined || norm(s.text) === norm(s.originalText) || norm(s.text) === norm(stripSpokenQuotes(s.originalText));
+    const pieces = alone && untouched ? splitSentences(s.text) : [];
     if (pieces.length < 2) { sections.push(s); return; }
     changed = true;
-    pieces.forEach((t, n) => sections.push({ ...s, id: n === 0 ? s.id : newId(), text: t, updatedAt: n === 0 ? s.updatedAt : now }));
+    pieces.forEach((t, n) => sections.push({ ...s, originalText: s.originalText ?? s.text, id: n === 0 ? s.id : newId(), text: t, updatedAt: n === 0 ? s.updatedAt : now }));
   });
   return changed ? { ...video, sections } : video;
 }
