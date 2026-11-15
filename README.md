@@ -64,6 +64,11 @@ notice; for a script that **already exists** the app asks first ("Import with ba
 later") so a different reading can't silently reshuffle it. Re-imports keep your text edits, locations and ticks on
 paragraphs whose source text did not change.
 
+Known limits: Firebase App Check is not enabled, so anyone who copies the public web config could spend the free
+Gemini quota (the free tier simply stops when exhausted; imports then fall back to the basic reading). Two people
+importing the same new file name at the very same moment can still create two scripts with that name. Documents over
+400 paragraphs or 60 000 characters always use the basic reading.
+
 After updating the app, republish `firestore.rules` (Firestore → Rules → paste → Publish): videos are now stored as
 their own documents, which needs the new `videos` rule.
 
