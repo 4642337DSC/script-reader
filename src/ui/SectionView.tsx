@@ -3,6 +3,7 @@ import { wordsOf } from '../model/wordMoves';
 import type { Rect } from './placePopover';
 import { AutoSaveText } from './AutoSaveText';
 import { TAG_INFO } from './tagInfo';
+import { TagIcon } from './TagIcon';
 
 /** Everything the words of a paragraph need from the screen that owns the selection. */
 export interface WordCtl {
@@ -62,8 +63,9 @@ export function SectionView({ section, ctl, over, onToggleDone, onOpenLocation, 
             class={`tag-btn${section.tag ? '' : ' empty'}`}
             data-tag={section.tag ?? ''}
             aria-label={`Shot tag: ${section.tag ? TAG_INFO[section.tag].label : 'none'}`}
+            title={section.tag ? TAG_INFO[section.tag].label : 'Shot tag'}
             onClick={() => onCycleTag(section.id)}
-          >{section.tag ? <><span>{TAG_INFO[section.tag].icon}</span><span class="tag-name">{TAG_INFO[section.tag].label}</span></> : <span>🏷</span>}</button>
+          ><TagIcon tag={section.tag} /></button>
           </div>
           {!editing && <button class="edit-btn" aria-label="Edit text" onClick={() => ctl.onStartEdit(section.id)}>✎</button>}
         </div>

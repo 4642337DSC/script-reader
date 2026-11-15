@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test, vi } from 'vitest';
 import { cleanup, fireEvent, render } from '@testing-library/preact';
 import { ReaderScreen } from './ReaderScreen';
 import { TAG_INFO } from './tagInfo';
+import { TagIcon } from './TagIcon';
 import type { Video } from '../model/types';
 
 afterEach(cleanup);
@@ -26,14 +27,25 @@ describe('shot tag icon on each card', () => {
     const r = setup();
     expect(r.tagBtn(0).getAttribute('aria-label')).toBe('Shot tag: none');
     expect(r.tagBtn(1).getAttribute('aria-label')).toBe('Shot tag: Close-up');
-    expect(r.tagBtn(1).textContent).toContain(TAG_INFO.closeup.icon);
+    expect(r.tagBtn(1).querySelector('svg[data-icon="closeup"]')).toBeTruthy();
+    expect(r.tagBtn(0).querySelector('svg[data-icon="none"]')).toBeTruthy();
+    expect(r.tagBtn(1).textContent?.trim()).toBe('');
+    expect(r.tagBtn(1).getAttribute('title')).toBe('Close-up');
     expect(r.tagBtn(1).getAttribute('data-tag')).toBe('closeup');
   });
 
-  test('the four tags have their own icon and name', () => {
+  test('the four tags have their own name and their own line icon, all drawn in the same style', () => {
     expect(Object.keys(TAG_INFO)).toEqual(['wide', 'medium', 'closeup', 'voiceover']);
     expect(Object.values(TAG_INFO).map((t) => t.label)).toEqual(['Wide', 'Medium', 'Close-up', 'Voiceover']);
-    expect(new Set(Object.values(TAG_INFO).map((t) => t.icon)).size).toBe(4);
+    const kinds = ['none', 'wide', 'medium', 'closeup', 'voiceover'] as const;
+    const drawn = kinds.map((k) => render(<TagIcon tag={k === 'none' ? undefined : k} />).container.querySelector('svg')!);
+    expect(new Set(drawn.map((s) => s.innerHTML)).size).toBe(5);
+    for (const s of drawn) {
+      expect(s.getAttribute('viewBox')).toBe('0 0 24 24');
+      expect(s.getAttribute('fill')).toBe('none');
+      expect(s.getAttribute('stroke')).toBe('currentColor');
+      expect(s.getAttribute('aria-hidden')).toBe('true');
+    }
   });
 
   test('tapping the icon cycles none, wide, medium, close-up, voiceover, none', () => {
