@@ -8,6 +8,7 @@ import { LocationSheet } from './LocationSheet';
 import { SplitView } from './SplitView';
 import { EditText } from './EditText';
 import { NotesPanel } from './NotesPanel';
+import { MoveWords } from './MoveWords';
 
 interface Props {
   video: Video;
@@ -18,7 +19,7 @@ interface Props {
   now?: () => number;
 }
 
-type Mode = { kind: 'none' } | { kind: 'title' } | { kind: 'menu' | 'location' | 'split' | 'edit'; id: string };
+type Mode = { kind: 'none' } | { kind: 'title' } | { kind: 'menu' | 'location' | 'split' | 'edit' | 'move'; id: string };
 
 export function ReaderScreen({ video: initial, recents: initialRecents, fontScale, onFontScale, onChange, now = Date.now }: Props) {
   const [video, setVideo] = useState(initial);
@@ -67,8 +68,18 @@ export function ReaderScreen({ video: initial, recents: initialRecents, fontScal
           onEdit={() => setMode({ kind: 'edit', id: section.id })}
           onToggleDone={() => { commit(toggleDone(video, section.id, now())); setMode({ kind: 'none' }); }}
           onSplit={() => setMode({ kind: 'split', id: section.id })}
+          onMove={() => setMode({ kind: 'move', id: section.id })}
           onMerge={() => { commit(mergeWithPrevious(video, section.id, now())); setMode({ kind: 'none' }); }}
           onClose={() => setMode({ kind: 'none' })}
+        />
+      )}
+      {section && mode.kind === 'move' && (
+        <MoveWords
+          video={video}
+          sectionId={section.id}
+          now={now}
+          onApply={(v) => { commit(v); setMode({ kind: 'none' }); }}
+          onCancel={() => setMode({ kind: 'none' })}
         />
       )}
       {section && mode.kind === 'edit' && (
