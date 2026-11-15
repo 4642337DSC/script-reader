@@ -104,9 +104,9 @@ export function reimport(old: ScriptDoc, input: ImportedVideo[] | ParsedVideo[],
     const units = buildUnits(match.sections);
     const usedUnit = units.map(() => false);
     const sections: Section[] = [];
-    p.paragraphs.forEach((para, i) => {
+    p.paragraphs.forEach((para) => {
       const members = findMatch(match.sections, units, usedUnit, para);
-      if (!members) { sections.push(fresh.sections[i]); return; }
+      if (!members) { sections.push(...buildVideosFromImport([{ ...p, paragraphs: [para] }], now)[0].sections); return; }
       for (const k of members) {
         const s = match.sections[k];
         sections.push({

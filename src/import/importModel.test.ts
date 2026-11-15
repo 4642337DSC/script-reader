@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { buildVideosFromImport, normalizeImport, stripOuterQuotes, stripSpokenQuotes } from './importModel';
+import { buildVideosFromImport, normalizeImport, stripOuterQuotes, stripSpokenQuotes, splitSentences } from './importModel';
 import type { ImportedVideo, ParsedVideo } from '../model/types';
 
 describe('stripOuterQuotes', () => {
@@ -64,5 +64,16 @@ describe('buildVideosFromImport', () => {
       ['A doua', 'A doua', undefined, false, null, 5],
     ]);
     expect(new Set([v.id, ...v.sections.map((s) => s.id)]).size).toBe(3);
+  });
+});
+
+describe('one card per sentence', () => {
+  test('a paragraph becomes one card per sentence, all remembering the paragraph', () => {
+    const [v] = buildVideosFromImport([{ title: 'T', group: null, notes: '', paragraphs: [{ source: 'Unu doi. Trei patru! Cinci?', text: 'Unu doi. Trei patru! Cinci?' }] }], 1);
+    expect(v.sections.map((s) => s.text)).toEqual(['Unu doi.', 'Trei patru!', 'Cinci?']);
+    expect(new Set(v.sections.map((s) => s.originalText)).size).toBe(1);
+  });
+  test('abbreviations and numbers do not split', () => {
+    expect(splitSentences('Vorbește cu dr. Popescu. Pe 5. iunie vin.')).toEqual(['Vorbește cu dr. Popescu.', 'Pe 5. iunie vin.']);
   });
 });

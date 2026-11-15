@@ -38,6 +38,19 @@ export function normalizeImport(input: ParsedVideo[] | ImportedVideo[]): Importe
   }));
 }
 
+const ABBREV = /(?:^|\s)(?:dr|nr|str|etc|prof|ing|sc|bd|jud|av|ex)\.$/i;
+
+/** Splits spoken text into sentences (a new sentence starts with a capital letter after . ! ? or …). */
+export function splitSentences(text: string): string[] {
+  const parts = text.trim().split(/(?<=[.!?…]["”»)]?)\s+(?=[„"«(]?\p{Lu})/u);
+  const out: string[] = [];
+  for (const p of parts) {
+    if (out.length && (ABBREV.test(out[out.length - 1]) || /(?:^|\s)\d+\.$/.test(out[out.length - 1]))) out[out.length - 1] += ' ' + p;
+    else out.push(p);
+  }
+  return out.filter((x) => x.trim());
+}
+
 export function buildVideosFromImport(imported: ImportedVideo[], now: number): Video[] {
   return imported.map((v) => ({
     id: crypto.randomUUID(),
@@ -49,14 +62,14 @@ export function buildVideosFromImport(imported: ImportedVideo[], now: number): V
     ...(v.broll?.length
       ? { broll: v.broll.map((text) => ({ id: crypto.randomUUID(), text, done: false, updatedAt: now, originalText: text })) }
       : {}),
-    sections: v.paragraphs.map((p) => ({
+    sections: v.paragraphs.flatMap((p) => splitSentences(p.text).map((sentence) => ({
       id: crypto.randomUUID(),
-      text: p.text,
+      text: sentence,
       location: null,
       done: false,
       updatedAt: now,
       originalText: p.source,
       ...(p.suggestedLocation ? { suggestedLocation: p.suggestedLocation } : {}),
-    })),
+    }))),
   }));
 }
