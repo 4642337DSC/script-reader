@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Video } from '../model/types';
 import {
-  acceptSuggestion, addBroll, cycleTag, dismissSuggestion, mergeWithPrevious, removeBroll, setBrollText, setLocation, setText, setVideoNotes, setVideoTitle, splitSection, toggleBroll, toggleDone,
+  acceptSuggestion, addBroll, cycleTag, dismissSuggestion, mergeWithPrevious, removeBroll, setBrollText, setLocation, setText, setVideoNotes, setVideoTitle, splitSection, toggleBroll, toggleDone, splitUntouchedSentences,
 } from '../model/sections';
 import { carveWordsIntoSection, moveWordsToAdjacentSection } from '../model/wordMoves';
 import { recordLocation } from '../model/recentLocations';
@@ -56,6 +56,14 @@ export function ReaderScreen({
       lastCommitted.current = fingerprint(initial);
     }
   }, [initial]);
+  // older imports have one card per paragraph: split the untouched ones into sentences when the video is opened
+  useEffect(() => {
+    const split = splitUntouchedSentences(initial, now());
+    if (split === initial) return;
+    lastCommitted.current = fingerprint(split);
+    setVideo(split);
+    onChange(split, initialRecents);
+  }, [initial.id]);
   const [recents, setRecents] = useState(initialRecents);
   useEffect(() => { setRecents(initialRecents); }, [initialRecents]);
 

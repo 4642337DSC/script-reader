@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { buildVideosFromImport } from '../import/importModel';
-import { acceptSuggestion, dismissSuggestion, mergeWithPrevious, setLocation, setText, setVideoNotes, setVideoTitle, splitSection } from './sections';
-import type { Video } from './types';
+import { acceptSuggestion, dismissSuggestion, mergeWithPrevious, setLocation, setText, setVideoNotes, setVideoTitle, splitSection, splitUntouchedSentences } from './sections';
+import type { Section, Video } from './types';
 
 const mk = (): Video =>
   buildVideosFromImport([{
@@ -48,5 +48,21 @@ describe('editing helpers', () => {
     const v = mk();
     expect(setLocation(v, v.sections[0].id, 'Office', 3).sections[0]).toMatchObject({ location: 'Office', suggestedLocation: null });
     expect(dismissSuggestion(v, v.sections[0].id, 3).sections[0]).toMatchObject({ location: null, suggestedLocation: '', updatedAt: 3 });
+  });
+});
+
+describe('splitUntouchedSentences', () => {
+  test('splits untouched paragraph cards, keeps edited and already-split ones', () => {
+    const mk = (id: string, text: string, orig: string): Section => ({ id, text, originalText: orig, location: 'Kitchen', done: true, updatedAt: 1 });
+    const v = { id: 'v', title: 'T', sections: [
+      mk('a', 'Unu doi. Trei patru.', 'Unu doi. Trei patru.'),
+      mk('b', 'Edited. Text.', 'Cinci. Sase.'),
+      mk('c', 'Sapte.', 'Sapte. Opt.'), mk('d', 'Opt.', 'Sapte. Opt.'),
+    ] } as Video;
+    const out = splitUntouchedSentences(v, 2);
+    expect(out.sections.map((s) => s.text)).toEqual(['Unu doi.', 'Trei patru.', 'Edited. Text.', 'Sapte.', 'Opt.']);
+    expect(out.sections[1].location).toBe('Kitchen');
+    expect(out.sections[1].done).toBe(true);
+    expect(splitUntouchedSentences(out, 3)).toBe(out);
   });
 });

@@ -1,4 +1,5 @@
 import type { BrollItem, ParsedVideo, Section, ShotTag, Video } from './types';
+import { splitSentences } from '../import/importModel';
 
 const newId = () => crypto.randomUUID();
 
@@ -122,4 +123,24 @@ export function cycleTag(video: Video, sectionId: string, now: number): Video {
 
 export function toggleDone(video: Video, sectionId: string, now: number): Video {
   return mapSection(video, sectionId, (s) => ({ ...s, done: !s.done, updatedAt: now }));
+}
+
+/**
+ * Splits every untouched one-piece card (its text still equals the imported paragraph) into one card per sentence.
+ * The first piece keeps the card; the others copy its location, tick and tag. Returns the same video when nothing splits.
+ */
+export function splitUntouchedSentences(video: Video, now: number): Video {
+  let changed = false;
+  const norm = (t: string) => t.replace(/\s+/g, ' ').trim();
+  const sections: Section[] = [];
+  video.sections.forEach((s, i) => {
+    const prev = video.sections[i - 1];
+    const next = video.sections[i + 1];
+    const alone = s.originalText !== undefined && prev?.originalText !== s.originalText && next?.originalText !== s.originalText;
+    const pieces = alone && norm(s.text) === norm(s.originalText!) ? splitSentences(s.text) : [];
+    if (pieces.length < 2) { sections.push(s); return; }
+    changed = true;
+    pieces.forEach((t, n) => sections.push({ ...s, id: n === 0 ? s.id : newId(), text: t, updatedAt: n === 0 ? s.updatedAt : now }));
+  });
+  return changed ? { ...video, sections } : video;
 }
