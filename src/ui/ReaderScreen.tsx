@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
 import type { Video } from '../model/types';
-import { mergeWithPrevious, setLocation, setText, setVideoNotes, setVideoTitle, splitSection, toggleDone } from '../model/sections';
+import { acceptSuggestion, dismissSuggestion, mergeWithPrevious, setLocation, setText, setVideoNotes, setVideoTitle, splitSection, toggleDone } from '../model/sections';
 import { recordLocation } from '../model/recentLocations';
 import { Reader } from './Reader';
 import { SectionMenu } from './SectionMenu';
@@ -44,6 +44,11 @@ export function ReaderScreen({ video: initial, recents: initialRecents, fontScal
         onFontScale={onFontScale}
         onSectionTap={(id) => { setUndoId(null); setMode({ kind: 'menu', id }); }}
         onEditTitle={() => setMode({ kind: 'title' })}
+        onAcceptSuggestion={(id) => {
+          const s = video.sections.find((x) => x.id === id);
+          if (s?.suggestedLocation) commit(acceptSuggestion(video, id, now()), recordLocation(recents, s.suggestedLocation));
+        }}
+        onDismissSuggestion={(id) => commit(dismissSuggestion(video, id, now()))}
         afterHeader={<NotesPanel notes={video.notes ?? ''} onSave={(n) => commit(setVideoNotes(video, n))} />}
       />
       {mode.kind === 'title' && (

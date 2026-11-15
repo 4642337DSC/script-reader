@@ -18,14 +18,19 @@ export function VideoList({ repo, clientId, scriptId, go, onError }: Props) {
   return (
     <>
       <h2>{doc.name}</h2>
-      {doc.videos.map((v) => {
+      {doc.videos.map((v, idx) => {
+        const prevGroup = idx > 0 ? doc.videos[idx - 1].group ?? null : null;
+        const showGroup = !!v.group && v.group !== prevGroup;
         const done = v.sections.filter((s) => s.done).length;
         const locs = [...new Set(v.sections.map((s) => s.location).filter(Boolean))].join(', ');
         return (
-          <button class="list-item" key={v.id} onClick={() => go(`#/c/${clientId}/s/${scriptId}/v/${v.id}`)}>
+          <div key={v.id}>
+          {showGroup && <h3 class="group-head">{v.group}</h3>}
+          <button class="list-item" onClick={() => go(`#/c/${clientId}/s/${scriptId}/v/${v.id}`)}>
             {v.title}
             <small>{done}/{v.sections.length} done{locs ? ` · ${locs}` : ''}</small>
           </button>
+          </div>
         );
       })}
       {doc.orphans.length > 0 && (

@@ -12,10 +12,12 @@ interface Props {
   onSectionTap: (id: string) => void;
   onFontScale: (scale: number) => void;
   onEditTitle?: () => void;
+  onAcceptSuggestion?: (id: string) => void;
+  onDismissSuggestion?: (id: string) => void;
   afterHeader?: ComponentChildren;
 }
 
-export function Reader({ video, fontScale, onSectionTap, onFontScale, onEditTitle, afterHeader }: Props) {
+export function Reader({ video, fontScale, onSectionTap, onFontScale, onEditTitle, onAcceptSuggestion, onDismissSuggestion, afterHeader }: Props) {
   const clamp = (n: number) => Math.min(MAX_SCALE, Math.max(MIN_SCALE, n));
   return (
     <div class="reader" style={{ '--scale': String(fontScale) } as any}>
@@ -29,7 +31,7 @@ export function Reader({ video, fontScale, onSectionTap, onFontScale, onEditTitl
       </header>
       {afterHeader}
       {video.sections.map((s) => (
-        <SectionView key={s.id} section={s} onTap={onSectionTap} />
+        <SectionView key={s.id} section={s} onTap={onSectionTap} onAcceptSuggestion={onAcceptSuggestion} onDismissSuggestion={onDismissSuggestion} />
       ))}
     </div>
   );

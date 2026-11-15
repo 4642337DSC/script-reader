@@ -52,3 +52,7 @@ html, body { margin: 0; background: #101114; color: #e8e8ea; font-family: system
 .notes-toggle { min-height: 44px; background: #22252b; color: #8ab4ff; border: 0; border-radius: 8px; padding: 0 1rem; }
 .notes-body { background: #1b1d22; border-radius: 10px; padding: .4rem 1rem; margin-top: .4rem; }
 .notes-text { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5; }
+
+.group-head { margin: 1.2rem 0 .3rem; color: #8ab4ff; font-size: 1rem; overflow-wrap: anywhere; }
+.suggest { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; color: #c9b458; font-size: .9rem; margin-bottom: .3rem; }
+.suggest button { min-height: 44px; background: #2a2e36; color: inherit; border: 0; border-radius: 8px; padding: 0 .8rem; }

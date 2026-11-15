@@ -43,6 +43,30 @@ npm run build
 8. Push to `main` (or re-run the **Deploy to GitHub Pages** workflow). For local work put the same four
    variables in `.env.local`.
 
+## Smart import with Gemini (one-time Firebase setup)
+Importing a .docx or a Google Doc asks Gemini to work out the structure: group headings, video titles, spoken text,
+filming notes ("Cadre și foto…"), publishing notes and filming cues. Only the labels come from Gemini; every piece
+of text shown is copied verbatim from your document (spoken text loses one outer pair of quotation marks). Filming
+notes appear in a per-video **Notes** panel, and a cue like "Filmare tipografie" becomes a *suggested* location you
+can accept with one tap. Everyone with access can edit section text, video titles and Notes afterwards.
+
+Setup: **Firebase console → Build → AI Logic → Get started → Gemini Developer API**. Keep the project on the free
+**Spark** plan with **no Cloud Billing account** (linking one switches Gemini to pay-as-you-go). The app uses the
+model in `src/ai/geminiConfig.ts` (currently `gemini-3.8-flash`, marked "billing not required" in Firebase's
+supported-models page); change it there if Google retires it.
+
+What is sent to Google: only the document's paragraph text and heading/bold hints, never client names, member
+emails, locations or ticks. As we understand Google's terms, content sent on the free tier may be used by Google to
+improve its products. The app shows a one-time notice before the first import.
+
+If Gemini is unavailable (quota, network, invalid answer): a **new** script is imported with the basic reading and a
+notice; for a script that **already exists** the app asks first ("Import with basic reading anyway" / "Try again
+later") so a different reading can't silently reshuffle it. Re-imports keep your text edits, locations and ticks on
+paragraphs whose source text did not change.
+
+After updating the app, republish `firestore.rules` (Firestore → Rules → paste → Publish): videos are now stored as
+their own documents, which needs the new `videos` rule.
+
 ## Google Docs link import (one-time Google Cloud setup)
 "+" → "From Google Docs link" reads a Google Doc with the signed-in person's own permission (read-only), once.
 Nothing about the link is stored. To enable it:
