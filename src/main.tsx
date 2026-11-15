@@ -1,4 +1,8 @@
 import './ui/styles.css';
 import { render } from 'preact';
+import { App } from './ui/App';
+import { openStore } from './storage/db';
 
-render(<p>Script Reader</p>, document.getElementById('app')!);
+openStore().then((store) => {
+  render(<App store={store} />, document.getElementById('app')!);
+});
