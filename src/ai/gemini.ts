@@ -9,8 +9,9 @@ export const MAX_CHARS = 60_000;
 type Generate = (prompt: string, schema: object) => Promise<string>;
 
 function statusOf(e: unknown): number | undefined {
-  const x = e as { status?: unknown; customData?: { status?: unknown } } | null;
-  const s = x?.status ?? x?.customData?.status;
+  // Firebase AI errors carry the HTTP status in customErrorData (some SDK versions use customData)
+  const x = e as { status?: unknown; customData?: { status?: unknown }; customErrorData?: { status?: unknown } } | null;
+  const s = x?.status ?? x?.customErrorData?.status ?? x?.customData?.status;
   return typeof s === 'number' ? s : undefined;
 }
 

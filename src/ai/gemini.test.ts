@@ -33,6 +33,7 @@ describe('createGeminiClassifier', () => {
   test.each([
     [{ status: 429 }],
     [{ customData: { status: 429 } }],
+    [{ customErrorData: { status: 429 } }],
     [new Error('[429] RESOURCE_EXHAUSTED: quota exceeded')],
   ])('quota errors (%j) are reported as quota', async (err) => {
     const e = await reason(createGeminiClassifier(vi.fn().mockRejectedValue(err))(paragraphs));

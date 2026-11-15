@@ -96,8 +96,17 @@ export function createFirestoreRepo(db: Firestore, user: AuthUser): Repo {
     const flat = flattenDoc(after, orders, videoOrders);
     const d = diffRows(beforeFlat.rows, flat.rows);
     let vd = diffVideos(beforeFlat.videos, flat.videos);
-    // first save of a script that still has the old `videos` array: write every video document once
-    if (before.legacy) vd = { sets: flat.videos, updates: [], deletes: [] };
+    // First save of a script that still has the old `videos` array: write every video document once.
+    // But if someone else already converted it (video documents exist), only write this user's own edits,
+    // otherwise a stale legacy copy would overwrite their titles, notes and ordering.
+    let converting = false;
+    if (before.legacy) {
+      const cur = await getDocs(videosCol(c, s)).catch(() => null);
+      if (cur && cur.empty) {
+        converting = true;
+        vd = { sets: flat.videos, updates: [], deletes: [] };
+      }
+    }
     const total = d.sets.length + d.updates.length + d.deletes.length + vd.sets.length + vd.updates.length + vd.deletes.length;
     if (!total) return {};
     const secDoc = (id: string) => doc(sectionsCol(c, s), id);
@@ -107,7 +116,7 @@ export function createFirestoreRepo(db: Firestore, user: AuthUser): Repo {
       // merge-set, not update: if the section was deleted meanwhile this must not fail the whole batch
       ...d.updates.map((u) => (b: WriteBatch) => b.set(secDoc(u.id), u.patch, { merge: true })),
       ...d.deletes.map((id) => (b: WriteBatch) => b.delete(secDoc(id))),
-      ...vd.sets.map((v) => (b: WriteBatch) => b.set(vidDoc(v.id), withoutId(v), before.legacy ? { merge: true } : {})),
+      ...vd.sets.map((v) => (b: WriteBatch) => b.set(vidDoc(v.id), withoutId(v), converting ? { merge: true } : {})),
       ...vd.updates.map((u) => (b: WriteBatch) => b.set(vidDoc(u.id), u.patch, { merge: true })),
       ...vd.deletes.map((id) => (b: WriteBatch) => b.delete(vidDoc(id))),
     ];
@@ -177,6 +186,9 @@ export function createFirestoreRepo(db: Firestore, user: AuthUser): Repo {
       let vrows: VideoRow[] | undefined;
       const emit = () => {
         if (meta === undefined || rows === undefined || vrows === undefined) return;
+        // The script, section and video listeners fire separately. A script that says it has videos
+        // (videoCount) but shows none yet is a half-arrived update, not an empty script: wait for the rest.
+        if (meta !== null && vrows.length === 0 && !(meta.videos?.length) && (meta.videoCount ?? 0) > 0) return;
         cb(meta === null ? null : assemble(scriptId, meta, rows, vrows));
       };
       const key = `${clientId}/${scriptId}/${Math.random()}`;
