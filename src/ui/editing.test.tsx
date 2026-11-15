@@ -3,6 +3,7 @@ import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/preac
 import { App } from './App';
 import { createMemoryBackend, createMemoryRepo } from '../data/memoryRepo';
 import { setText } from '../model/sections';
+import { para } from '../testing/dom';
 import type { AuthApi, AuthUser, ScriptData } from '../data/types';
 
 afterEach(cleanup);
@@ -28,34 +29,30 @@ async function open() {
   fireEvent.click(await r.findByText('Acme'));
   fireEvent.click(await r.findByText('S.docx'));
   fireEvent.click(await r.findByText('Vid'));
-  await r.findByText('first para');
+  await waitFor(() => expect(para(r.container, 'first para')).toBeTruthy());
   return { ...r, bob, c1, scriptId, cur: () => cur! };
 }
 
 describe('editing', () => {
   test('Edit text saves the new text, keeps the original, and reaches other members', async () => {
     const w = await open();
-    fireEvent.click(w.getByText('first para'));
-    fireEvent.click(w.getByText('Edit text'));
+    fireEvent.click(w.container.querySelectorAll('.edit-btn')[0]);
     const box = w.getByLabelText('Section text') as HTMLTextAreaElement;
     expect(box.value).toBe('first para');
     fireEvent.input(box, { target: { value: 'first para (fixed)' } });
     fireEvent.click(w.getByText('Save'));
-    expect(await w.findByText('first para (fixed)')).toBeTruthy();
+    await waitFor(() => expect(para(w.container, 'first para (fixed)')).toBeTruthy());
     await waitFor(() => expect(w.cur().doc.videos[0].sections[0]).toMatchObject({ text: 'first para (fixed)', originalText: 'first para' }));
   });
 
   test('blank text cannot be saved and Cancel changes nothing', async () => {
     const w = await open();
-    fireEvent.click(w.getByText('first para'));
-    fireEvent.click(w.getByText('Edit text'));
+    fireEvent.click(w.container.querySelectorAll('.edit-btn')[0]);
     fireEvent.input(w.getByLabelText('Section text'), { target: { value: '   ' } });
     expect((w.getByText('Save') as HTMLButtonElement).disabled).toBe(true);
-    const cancels = w.getAllByText('Cancel');
-    fireEvent.click(cancels[cancels.length - 1]);
-    expect(w.queryByLabelText('Section text')).toBeNull();
     fireEvent.click(w.getByText('Cancel'));
-    expect(w.getByText('first para')).toBeTruthy();
+    expect(w.queryByLabelText('Section text')).toBeNull();
+    expect(para(w.container, 'first para')).toBeTruthy();
     expect(w.cur().doc.videos[0].sections[0].text).toBe('first para');
   });
 
@@ -89,6 +86,6 @@ describe('editing', () => {
     const before = w.cur();
     const v = setText(before.doc.videos[0], before.doc.videos[0].sections[1].id, 'second para (bob fixed)', Date.now());
     await act(async () => { await w.bob.saveScript(w.c1, w.scriptId, before, { ...before.doc, videos: [v] }); });
-    expect(await w.findByText('second para (bob fixed)')).toBeTruthy();
+    await waitFor(() => expect(para(w.container, 'second para (bob fixed)')).toBeTruthy());
   });
 });

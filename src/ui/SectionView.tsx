@@ -1,21 +1,56 @@
+import { useState } from 'preact/hooks';
 import type { Section } from '../model/types';
+import { wordsOf } from '../model/wordMoves';
+
+/** Everything the words of a paragraph need from the screen that owns the selection. */
+export interface WordCtl {
+  selection: { sectionId: string; start: number; end: number } | null;
+  editingId: string | null;
+  onWordClick: (sectionId: string, i: number) => void;
+  onWordPointerDown: (sectionId: string, i: number, e: PointerEvent) => void;
+  onStartEdit: (sectionId: string) => void;
+  onSaveEdit: (sectionId: string, text: string) => void;
+  onCancelEdit: () => void;
+}
 
 interface Props {
   section: Section;
+  ctl: WordCtl;
+  over?: boolean;
   /** The coloured bar on the left: one tap toggles done. */
   onToggleDone: (id: string) => void;
   /** The location label above the text: opens the location box. */
   onOpenLocation: (id: string) => void;
-  /** The text itself: opens the paragraph editor (edit, split, merge, move words). */
-  onOpenEditor: (id: string) => void;
   onAcceptSuggestion?: (id: string) => void;
   onDismissSuggestion?: (id: string) => void;
 }
 
-export function SectionView({ section, onToggleDone, onOpenLocation, onOpenEditor, onAcceptSuggestion, onDismissSuggestion }: Props) {
-  const suggestion = !section.location && section.suggestedLocation ? section.suggestedLocation : null;
+function InlineEdit({ initial, onSave, onCancel }: { initial: string; onSave: (t: string) => void; onCancel: () => void }) {
+  const [text, setText] = useState(initial);
   return (
-    <div class={`section${section.done ? ' done' : ''}`} data-section={section.id}>
+    <div class="inline-edit">
+      <textarea
+        class="edit-box"
+        aria-label="Section text"
+        value={text}
+        rows={4}
+        autoFocus
+        onInput={(e) => setText((e.target as HTMLTextAreaElement).value)}
+      />
+      <div class="chips">
+        <button class="chip" disabled={text.trim().length === 0} onClick={() => onSave(text)}>Save</button>
+        <button class="chip" onClick={onCancel}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
+export function SectionView({ section, ctl, over, onToggleDone, onOpenLocation, onAcceptSuggestion, onDismissSuggestion }: Props) {
+  const suggestion = !section.location && section.suggestedLocation ? section.suggestedLocation : null;
+  const sel = ctl.selection && ctl.selection.sectionId === section.id ? ctl.selection : null;
+  const editing = ctl.editingId === section.id;
+  return (
+    <div class={`section${section.done ? ' done' : ''}${over ? ' over' : ''}`} data-section={section.id}>
       <button
         class="done-btn"
         aria-label={section.done ? 'Mark not done' : 'Mark done'}
@@ -23,9 +58,12 @@ export function SectionView({ section, onToggleDone, onOpenLocation, onOpenEdito
         onClick={() => onToggleDone(section.id)}
       >{section.done ? '✓' : ''}</button>
       <div class="section-body">
-        <button class={`loc loc-btn${section.location ? '' : ' empty'}`} onClick={() => onOpenLocation(section.id)}>
-          {section.location ? `📍 ${section.location}` : '+ location'}
-        </button>
+        <div class="section-top">
+          <button class={`loc loc-btn${section.location ? '' : ' empty'}`} onClick={() => onOpenLocation(section.id)}>
+            {section.location ? `📍 ${section.location}` : '+ location'}
+          </button>
+          {!editing && <button class="edit-btn" aria-label="Edit text" onClick={() => ctl.onStartEdit(section.id)}>✎</button>}
+        </div>
         {suggestion && (
           <div class="suggest">
             <span>{`📍 ${suggestion}?`}</span>
@@ -33,7 +71,21 @@ export function SectionView({ section, onToggleDone, onOpenLocation, onOpenEdito
             <button aria-label="Dismiss suggested location" onClick={() => onDismissSuggestion?.(section.id)}>Dismiss</button>
           </div>
         )}
-        <div class="text" onClick={() => onOpenEditor(section.id)}>{section.text}</div>
+        {editing ? (
+          <InlineEdit initial={section.text} onSave={(t) => ctl.onSaveEdit(section.id, t)} onCancel={ctl.onCancelEdit} />
+        ) : (
+          <div class="text">
+            {wordsOf(section.text).map((w, i) => (
+              <span key={i}>
+                <span
+                  class={`w${sel && i >= sel.start && i < sel.end ? ' sel' : ''}`}
+                  onClick={() => ctl.onWordClick(section.id, i)}
+                  onPointerDown={(e) => ctl.onWordPointerDown(section.id, i, e as unknown as PointerEvent)}
+                >{w}</span>{' '}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

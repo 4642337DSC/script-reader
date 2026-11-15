@@ -3,6 +3,7 @@ import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/preac
 import { App } from './App';
 import { createMemoryBackend, createMemoryRepo } from '../data/memoryRepo';
 import { toggleDone } from '../model/sections';
+import { para } from '../testing/dom';
 import type { AuthApi, AuthUser, ScriptData } from '../data/types';
 
 afterEach(cleanup);
@@ -25,7 +26,7 @@ async function open() {
   fireEvent.click(await r.findByText('Acme'));
   fireEvent.click(await r.findByText('S.docx'));
   fireEvent.click(await r.findByText('Vid'));
-  await r.findByText('first para');
+  await waitFor(() => expect(para(r.container, 'first para')).toBeTruthy());
   return { ...r, bob, c1, scriptId, cur: () => cur! };
 }
 

@@ -75,3 +75,20 @@ html, body { margin: 0; background: #101114; color: #e8e8ea; font-family: system
 .section-body { flex: 1; min-width: 0; padding: .5rem .6rem .5rem 0; }
 .loc-btn { background: none; border: 0; padding: .3rem 0; min-height: 44px; text-align: left; cursor: pointer; font-family: inherit; }
 .section .text { cursor: pointer; }
+
+/* in-place editing on the reading screen */
+.section .text { user-select: none; -webkit-user-select: none; }
+.w { padding: 3px 1px; border-radius: 5px; cursor: pointer; touch-action: manipulation; }
+.w.sel { background: #36507a; touch-action: none; cursor: grab; }
+.gap { position: relative; height: 36px; margin: 0; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+.gap::before { content: ""; position: absolute; left: 44px; right: 0; top: 50%; border-top: 1px solid #2a2e36; }
+.gap.over { background: #1f2a3a; outline: 2px dashed #8ab4ff; }
+.gap-join { position: relative; z-index: 1; min-height: 32px; padding: 0 .7rem; background: #101114; color: #6b7280; border: 0; border-radius: 999px; font-size: .75rem; cursor: pointer; }
+.gap-join:hover, .gap-join:active { color: #8ab4ff; }
+.section.over { outline: 2px dashed #8ab4ff; border-radius: 10px; }
+.section-top { display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
+.edit-btn { min-width: 44px; min-height: 44px; background: none; color: #8a8f99; border: 0; font-size: 1.1rem; cursor: pointer; }
+.inline-edit { margin: .3rem 0 .6rem; }
+.inline-msg { color: #ffb4b4; margin: .3rem 0 .6rem; }
+.undo-btn { min-width: 44px; min-height: 44px; margin-left: .25rem; background: #22252b; color: inherit; border: 0; border-radius: 8px; font-size: 1.1rem; }
+.undo-btn:disabled { opacity: .35; }
