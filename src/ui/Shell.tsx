@@ -8,9 +8,9 @@ import { AdminScreen } from './AdminScreen';
 import { OrphansView } from './OrphansView';
 import { SyncBadge } from './SyncBadge';
 
-interface Props { repo: Repo; user: AuthUser; onSignOut: () => void }
+interface Props { repo: Repo; user: AuthUser; onSignOut: () => void; getDriveToken?: () => Promise<string> }
 
-export function Shell({ repo, user, onSignOut }: Props) {
+export function Shell({ repo, user, onSignOut, getDriveToken }: Props) {
   const [hash, go] = useHash();
   const route = parseRoute(hash);
   const [clients, setClients] = useState<Client[] | null>(null);
@@ -70,7 +70,7 @@ export function Shell({ repo, user, onSignOut }: Props) {
   } else if (route.name === 'admin') {
     body = admin ? <AdminScreen repo={repo} clients={clients} /> : <p>…</p>;
   } else if (route.name === 'scripts') {
-    body = <ScriptList repo={repo} clientId={route.c} go={go} onError={onError} isAdmin={!!admin} />;
+    body = <ScriptList repo={repo} clientId={route.c} go={go} onError={onError} isAdmin={!!admin} getDriveToken={getDriveToken} />;
   } else if (route.name === 'videos') {
     body = <VideoList repo={repo} clientId={route.c} scriptId={route.s} go={go} onError={onError} />;
   } else if (route.name === 'orphans') {

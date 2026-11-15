@@ -12,5 +12,12 @@ export function App({ auth, makeRepo }: Props) {
 
   if (user === undefined) return <p>Loading…</p>;
   if (!user || !repo) return <SignIn onSignIn={() => auth.signIn()} />;
-  return <Shell repo={repo} user={user} onSignOut={() => void auth.signOut()} />;
+  return (
+    <Shell
+      repo={repo}
+      user={user}
+      onSignOut={() => void auth.signOut()}
+      getDriveToken={auth.getDriveToken ? () => auth.getDriveToken!() : undefined}
+    />
+  );;
 }

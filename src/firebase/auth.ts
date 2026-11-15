@@ -9,5 +9,15 @@ export function createAuth(auth: Auth): AuthApi {
     },
     async signIn() { await signInWithPopup(auth, new GoogleAuthProvider()); },
     async signOut() { await fbSignOut(auth); },
+    // Asked only when someone imports a Google Doc; the token is used once and never stored.
+    async getDriveToken() {
+      const provider = new GoogleAuthProvider();
+      provider.addScope('https://www.googleapis.com/auth/drive.readonly');
+      if (auth.currentUser?.email) provider.setCustomParameters({ login_hint: auth.currentUser.email });
+      const result = await signInWithPopup(auth, provider);
+      const token = GoogleAuthProvider.credentialFromResult(result)?.accessToken;
+      if (!token) throw new Error('no access token');
+      return token;
+    },
   };
 }

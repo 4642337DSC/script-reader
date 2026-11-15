@@ -43,6 +43,17 @@ npm run build
 8. Push to `main` (or re-run the **Deploy to GitHub Pages** workflow). For local work put the same four
    variables in `.env.local`.
 
+## Google Docs link import (one-time Google Cloud setup)
+"+" → "From Google Docs link" reads a Google Doc with the signed-in person's own permission (read-only), once.
+Nothing about the link is stored. To enable it:
+1. https://console.cloud.google.com → select the project named like your Firebase project (e.g. `script-reader-…`).
+2. **APIs & Services → Library → Google Drive API → Enable**.
+3. **APIs & Services → OAuth consent screen** (or *Google Auth Platform → Data Access*): **Add or remove scopes** →
+   *Manually add scopes* → paste `https://www.googleapis.com/auth/drive.readonly` → **Add to table → Update → Save**.
+4. **Audience**: if it says *Testing*, click **Publish app → Confirm** so team members aren't blocked.
+Each person sees a one-time Google permission screen (with an "unverified app" warning: **Advanced → Go to … (unsafe)**).
+They can only import documents their own Google account can open.
+
 ## Deploy
 Push to `main`; `.github/workflows/deploy.yml` tests, builds and publishes to GitHub Pages
 (repo **Settings → Pages → Source: GitHub Actions**).

@@ -34,4 +34,6 @@ export interface AuthApi {
   onUser(cb: (u: AuthUser | null) => void): Unsub;
   signIn(): Promise<void>;
   signOut(): Promise<void>;
+  /** Optional: asks Google for read-only Docs/Drive access, for importing a Google Docs link. */
+  getDriveToken?(): Promise<string>;
 }
