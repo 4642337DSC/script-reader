@@ -34,11 +34,17 @@ export function mergeWithPrevious(video: Video, sectionId: string, now: number):
   if (i <= 0) return video;
   const prev = video.sections[i - 1];
   const cur = video.sections[i];
+  // pieces of one split paragraph share originalText; merging two different source paragraphs joins them
+  const originalText =
+    prev.originalText !== undefined && cur.originalText !== undefined && prev.originalText !== cur.originalText
+      ? `${prev.originalText} ${cur.originalText}`
+      : prev.originalText;
   const merged: Section = {
     ...prev,
     text: `${prev.text} ${cur.text}`,
     done: prev.done && cur.done,
     updatedAt: now,
+    ...(originalText !== undefined ? { originalText } : {}),
   };
   const sections = [...video.sections];
   sections.splice(i - 1, 2, merged);
@@ -47,7 +53,34 @@ export function mergeWithPrevious(video: Video, sectionId: string, now: number):
 
 export function setLocation(video: Video, sectionId: string, location: string | null, now: number): Video {
   const loc = location?.trim() || null;
-  return mapSection(video, sectionId, (s) => ({ ...s, location: loc, updatedAt: now }));
+  return mapSection(video, sectionId, (s) => ({ ...s, location: loc, updatedAt: now, ...(loc ? { suggestedLocation: null } : {}) }));
+}
+
+export function setText(video: Video, sectionId: string, text: string, now: number): Video {
+  const t = text.trim();
+  if (!t) return video;
+  return mapSection(video, sectionId, (s) => ({ ...s, text: t, updatedAt: now }));
+}
+
+export function setVideoTitle(video: Video, title: string): Video {
+  const t = title.trim();
+  return t ? { ...video, title: t } : video;
+}
+
+export function setVideoNotes(video: Video, notes: string): Video {
+  return { ...video, notes };
+}
+
+export function acceptSuggestion(video: Video, sectionId: string, now: number): Video {
+  const s = video.sections.find((x) => x.id === sectionId);
+  if (!s || !s.suggestedLocation) return video;
+  return mapSection(video, sectionId, (x) => ({ ...x, location: x.suggestedLocation ?? null, suggestedLocation: null, updatedAt: now }));
+}
+
+export function dismissSuggestion(video: Video, sectionId: string, now: number): Video {
+  const s = video.sections.find((x) => x.id === sectionId);
+  if (!s || !s.suggestedLocation) return video;
+  return mapSection(video, sectionId, (x) => ({ ...x, suggestedLocation: null, updatedAt: now }));
 }
 
 export function toggleDone(video: Video, sectionId: string, now: number): Video {

@@ -39,7 +39,7 @@ export function buildVideosFromImport(imported: ImportedVideo[], now: number): V
       done: false,
       updatedAt: now,
       originalText: p.source,
-      suggestedLocation: p.suggestedLocation ?? null,
+      ...(p.suggestedLocation ? { suggestedLocation: p.suggestedLocation } : {}),
     })),
   }));
 }

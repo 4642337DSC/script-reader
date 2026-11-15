@@ -38,6 +38,10 @@ service cloud.firestore {
         match /sections/{sec} {
           allow read, write: if canUse(c);
         }
+
+        match /videos/{v} {
+          allow read, write: if canUse(c);
+        }
       }
 
       match /meta/{m} {

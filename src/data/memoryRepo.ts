@@ -1,13 +1,13 @@
-import { reimport } from '../model/reimport';
-import { buildVideos } from '../model/sections';
+import { countNewOrphans, reimport } from '../model/reimport';
+import { buildVideosFromImport, normalizeImport } from '../import/importModel';
 import { recordLocation } from '../model/recentLocations';
-import { assembleDoc, assignOrders, diffRows, flattenDoc } from './docOps';
+import { assembleDoc, assignOrders, assignVideoOrders, diffRows, diffVideos, flattenDoc } from './docOps';
 import type {
-  AuthUser, Client, ParsedVideo, Repo, RepoError, ScriptData, ScriptDoc, ScriptSummary, SectionRow, SyncState, Unsub,
+  AuthUser, Client, ImportedVideo, ParsedVideo, Repo, RepoError, ScriptData, ScriptDoc, ScriptSummary, SectionRow, SyncState, Unsub, VideoRow,
 } from './types';
 
 /** In-memory Repo used by UI tests. Mirrors the real repo's contract, including access checks. */
-interface MScript { id: string; name: string; videos: { id: string; title: string }[]; rows: SectionRow[]; updatedAt: number }
+interface MScript { id: string; name: string; videos: VideoRow[]; rows: SectionRow[]; updatedAt: number }
 interface MClient { id: string; name: string; members: string[]; scripts: Map<string, MScript>; recents: string[] }
 
 export interface MemoryBackend {
@@ -63,14 +63,15 @@ export function createMemoryRepo(opts: Opts): MemoryRepo {
   };
 
   const scriptData = (s: MScript): ScriptData => assembleDoc(s.id, s.name, s.videos, s.rows);
-  const sameVideos = (a: { id: string; title: string }[], b: { id: string; title: string }[]) => JSON.stringify(a) === JSON.stringify(b);
 
   function applySave(clientId: string, scriptId: string, before: ScriptData, after: ScriptDoc): { droppedOnReject?: number } {
     const orders = assignOrders(after, before.orders);
-    const beforeRows = flattenDoc(before.doc, before.orders).rows;
-    const flat = flattenDoc(after, orders);
-    const d = diffRows(beforeRows, flat.rows);
-    const total = d.sets.length + d.updates.length + d.deletes.length;
+    const videoOrders = assignVideoOrders(after, before.videoOrders);
+    const beforeFlat = flattenDoc(before.doc, before.orders, before.videoOrders);
+    const flat = flattenDoc(after, orders, videoOrders);
+    const d = diffRows(beforeFlat.rows, flat.rows);
+    const vd = diffVideos(beforeFlat.videos, flat.videos);
+    const total = d.sets.length + d.updates.length + d.deletes.length + vd.sets.length + vd.updates.length + vd.deletes.length;
     const c = backend.clients.get(clientId);
     const s = c?.scripts.get(scriptId);
     if (!canOpen(c) || !s) return { droppedOnReject: total };
@@ -79,7 +80,11 @@ export function createMemoryRepo(opts: Opts): MemoryRepo {
     d.updates.forEach((u) => { const r = byId.get(u.id); if (r) byId.set(u.id, { ...r, ...u.patch }); });
     d.deletes.forEach((id) => byId.delete(id));
     s.rows = [...byId.values()];
-    if (!sameVideos(s.videos, flat.videos)) s.videos = flat.videos;
+    const vById = new Map(s.videos.map((v) => [v.id, v]));
+    vd.sets.forEach((v) => vById.set(v.id, v));
+    vd.updates.forEach((u) => { const v = vById.get(u.id); if (v) vById.set(u.id, { ...v, ...u.patch }); });
+    vd.deletes.forEach((id) => vById.delete(id));
+    s.videos = [...vById.values()];
     s.updatedAt = now();
     return {};
   }
@@ -150,21 +155,26 @@ export function createMemoryRepo(opts: Opts): MemoryRepo {
         if (c) c.members = [...new Set(emails.map(lower))];
       });
     },
-    addScript(clientId, name, parsed: ParsedVideo[]) {
+    addScript(clientId, name, parsed: ImportedVideo[] | ParsedVideo[]) {
       return write(() => {
         const c = requireClient(clientId);
         const existing = [...c.scripts.values()].find((s) => s.name === name);
         if (existing) {
           const before = scriptData(existing);
-          applySave(clientId, existing.id, before, reimport(before.doc, parsed, now()));
-          return { scriptId: existing.id, reimported: true };
+          const next = reimport(before.doc, parsed, now());
+          applySave(clientId, existing.id, before, next);
+          return { scriptId: existing.id, reimported: true, orphanedCount: countNewOrphans(before.doc, next) };
         }
         const id = `s${++backend.seq}`;
-        const doc: ScriptDoc = { fileId: id, name, videos: buildVideos(parsed, now()), orphans: [], updatedAt: now() };
-        const flat = flattenDoc(doc, assignOrders(doc, {}));
+        const doc: ScriptDoc = { fileId: id, name, videos: buildVideosFromImport(normalizeImport(parsed), now()), orphans: [], updatedAt: now() };
+        const flat = flattenDoc(doc, assignOrders(doc, {}), assignVideoOrders(doc, {}));
         c.scripts.set(id, { id, name, videos: flat.videos, rows: flat.rows, updatedAt: now() });
-        return { scriptId: id, reimported: false };
+        return { scriptId: id, reimported: false, orphanedCount: 0 };
       });
+    },
+    async hasScript(clientId, name) {
+      const c = requireClient(clientId);
+      return [...c.scripts.values()].some((s) => s.name === name);
     },
     deleteScript(clientId, scriptId) {
       return write(() => { requireAdmin(); backend.clients.get(clientId)?.scripts.delete(scriptId); });

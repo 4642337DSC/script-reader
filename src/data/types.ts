@@ -1,13 +1,24 @@
-import type { ParsedVideo, ScriptDoc } from '../model/types';
-export type { ParsedVideo, ScriptDoc, Section, Video } from '../model/types';
+import type { ImportedVideo, ParsedVideo, ScriptDoc } from '../model/types';
+export type { ImportedParagraph, ImportedVideo, ParsedVideo, ScriptDoc, Section, Video } from '../model/types';
 
 export interface Client { id: string; name: string; members: string[] }
 export interface SectionRow {
   id: string; videoId: string | null; order: number; text: string;
   location: string | null; done: boolean; updatedAt: number; orphaned: boolean;
+  originalText: string | null; suggestedLocation: string | null;
+}
+export interface VideoRow {
+  id: string; title: string; group: string | null; notes: string;
+  originalTitle: string; originalNotes: string; order: number;
 }
 export interface ScriptSummary { id: string; name: string; videoCount: number; updatedAt: number }
-export interface ScriptData { doc: ScriptDoc; orders: Record<string, number> } // doc.fileId = script id
+export interface ScriptData {
+  doc: ScriptDoc; // doc.fileId = script id
+  orders: Record<string, number>;
+  videoOrders: Record<string, number>;
+  /** True when the videos came from the old `videos` array on the script document (converted on next save). */
+  legacy?: boolean;
+}
 export interface SyncState { online: boolean; pending: boolean }
 export type Unsub = () => void;
 export type RepoError = { code: 'permission-denied' | 'not-found' | 'other'; message: string };
@@ -23,7 +34,8 @@ export interface Repo {
   renameClient(id: string, name: string): Promise<void>;
   deleteClient(id: string): Promise<void>;
   setMembers(id: string, emails: string[]): Promise<void>;
-  addScript(clientId: string, name: string, parsed: ParsedVideo[]): Promise<{ scriptId: string; reimported: boolean }>;
+  addScript(clientId: string, name: string, videos: ImportedVideo[] | ParsedVideo[]): Promise<{ scriptId: string; reimported: boolean; orphanedCount: number }>;
+  hasScript(clientId: string, name: string): Promise<boolean>;
   deleteScript(clientId: string, scriptId: string): Promise<void>;
   saveScript(clientId: string, scriptId: string, before: ScriptData, after: ScriptDoc): Promise<{ droppedOnReject?: number }>;
   addRecent(clientId: string, location: string): Promise<void>;

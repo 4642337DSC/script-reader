@@ -1,13 +1,13 @@
 import type { Section, Video } from '../model/types';
-import type { ScriptData, ScriptDoc, SectionRow } from './types';
+import type { ScriptData, ScriptDoc, SectionRow, VideoRow } from './types';
 
-type VideoMeta = { id: string; title: string };
 type Patch = Partial<Omit<SectionRow, 'id'>>;
+type VideoPatch = Partial<Omit<VideoRow, 'id'>>;
 
 const STEP = 1000;
 
-export function assignOrders(doc: ScriptDoc, known: Record<string, number>): Record<string, number> {
-  const ids = [...doc.videos.flatMap((v) => v.sections), ...doc.orphans].map((s) => s.id);
+/** Gives every id an increasing order value, keeping known values that are still increasing. */
+function orderSequence(ids: string[], known: Record<string, number>): Record<string, number> {
   const valid: boolean[] = [];
   let last = -Infinity;
   for (const id of ids) {
@@ -37,26 +37,56 @@ export function assignOrders(doc: ScriptDoc, known: Record<string, number>): Rec
   return out;
 }
 
-export function flattenDoc(doc: ScriptDoc, orders: Record<string, number>): { videos: VideoMeta[]; rows: SectionRow[] } {
+export function assignOrders(doc: ScriptDoc, known: Record<string, number>): Record<string, number> {
+  const ids = [...doc.videos.flatMap((v) => v.sections), ...doc.orphans].map((s) => s.id);
+  return orderSequence(ids, known);
+}
+
+export function assignVideoOrders(doc: ScriptDoc, known: Record<string, number>): Record<string, number> {
+  return orderSequence(doc.videos.map((v) => v.id), known);
+}
+
+export function legacyVideoRows(videos: { id: string; title: string }[]): VideoRow[] {
+  return videos.map((v, i) => ({
+    id: v.id, title: v.title, group: null, notes: '', originalTitle: v.title, originalNotes: '', order: STEP * (i + 1),
+  }));
+}
+
+export function flattenDoc(
+  doc: ScriptDoc,
+  orders: Record<string, number>,
+  videoOrders: Record<string, number> = assignVideoOrders(doc, {}),
+): { videos: VideoRow[]; rows: SectionRow[] } {
   const row = (s: Section, videoId: string | null): SectionRow => ({
     id: s.id, videoId, order: orders[s.id], text: s.text, location: s.location,
     done: s.done, updatedAt: s.updatedAt, orphaned: videoId === null,
+    originalText: s.originalText ?? null, suggestedLocation: s.suggestedLocation ?? null,
   });
   return {
-    videos: doc.videos.map((v) => ({ id: v.id, title: v.title })),
+    videos: doc.videos.map((v): VideoRow => ({
+      id: v.id, title: v.title, group: v.group ?? null, notes: v.notes ?? '',
+      originalTitle: v.originalTitle ?? v.title, originalNotes: v.originalNotes ?? '', order: videoOrders[v.id],
+    })),
     rows: [...doc.videos.flatMap((v) => v.sections.map((s) => row(s, v.id))), ...doc.orphans.map((s) => row(s, null))],
   };
 }
 
-export function assembleDoc(id: string, name: string, videos: VideoMeta[], rows: SectionRow[]): ScriptData {
+export function assembleDoc(id: string, name: string, videos: VideoRow[], rows: SectionRow[]): ScriptData {
   const sorted = [...rows].sort((a, b) => a.order - b.order);
-  const toSection = (r: SectionRow): Section => ({ id: r.id, text: r.text, location: r.location, done: r.done, updatedAt: r.updatedAt });
-  const vids: Video[] = videos.map((v) => ({
-    ...v,
+  const sortedVideos = [...videos].sort((a, b) => a.order - b.order);
+  const toSection = (r: SectionRow): Section => ({
+    id: r.id, text: r.text, location: r.location, done: r.done, updatedAt: r.updatedAt,
+    ...(r.originalText !== null ? { originalText: r.originalText } : {}),
+    ...(r.suggestedLocation ? { suggestedLocation: r.suggestedLocation } : {}),
+  });
+  const vids: Video[] = sortedVideos.map((v) => ({
+    id: v.id, title: v.title, group: v.group, notes: v.notes, originalTitle: v.originalTitle, originalNotes: v.originalNotes,
     sections: sorted.filter((r) => !r.orphaned && r.videoId === v.id).map(toSection),
   }));
   const orders: Record<string, number> = {};
   sorted.forEach((r) => { orders[r.id] = r.order; });
+  const videoOrders: Record<string, number> = {};
+  sortedVideos.forEach((v) => { videoOrders[v.id] = v.order; });
   return {
     doc: {
       fileId: id, name, videos: vids,
@@ -64,10 +94,11 @@ export function assembleDoc(id: string, name: string, videos: VideoMeta[], rows:
       updatedAt: rows.reduce((m, r) => Math.max(m, r.updatedAt), 0),
     },
     orders,
+    videoOrders,
   };
 }
 
-const FIELDS = ['videoId', 'order', 'text', 'location', 'done', 'orphaned', 'updatedAt'] as const;
+const FIELDS = ['videoId', 'order', 'text', 'location', 'done', 'orphaned', 'originalText', 'suggestedLocation', 'updatedAt'] as const;
 
 export function diffRows(before: SectionRow[], after: SectionRow[]) {
   const old = new Map(before.map((r) => [r.id, r]));
@@ -84,6 +115,25 @@ export function diffRows(before: SectionRow[], after: SectionRow[]) {
     if (Object.keys(patch).length) updates.push({ id: r.id, patch: patch as Patch });
   }
   const deletes = before.filter((r) => !seen.has(r.id)).map((r) => r.id);
+  return { sets, updates, deletes };
+}
+
+const VIDEO_FIELDS = ['title', 'group', 'notes', 'originalTitle', 'originalNotes', 'order'] as const;
+
+export function diffVideos(before: VideoRow[], after: VideoRow[]) {
+  const old = new Map(before.map((v) => [v.id, v]));
+  const seen = new Set<string>();
+  const sets: VideoRow[] = [];
+  const updates: { id: string; patch: VideoPatch }[] = [];
+  for (const v of after) {
+    seen.add(v.id);
+    const o = old.get(v.id);
+    if (!o) { sets.push(v); continue; }
+    const patch: Record<string, unknown> = {};
+    for (const f of VIDEO_FIELDS) if (o[f] !== v[f]) patch[f] = v[f];
+    if (Object.keys(patch).length) updates.push({ id: v.id, patch: patch as VideoPatch });
+  }
+  const deletes = before.filter((v) => !seen.has(v.id)).map((v) => v.id);
   return { sets, updates, deletes };
 }
 

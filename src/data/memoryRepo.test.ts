@@ -62,7 +62,7 @@ describe('MemoryRepo', () => {
     const v = toggleDone(cur!.doc.videos[0], cur!.doc.videos[0].sections[0].id, 9);
     await w.anna.saveScript(w.c1, scriptId, cur!, { ...cur!.doc, videos: [v] });
     const r = await w.anna.addScript(w.c1, 's.docx', [{ title: 'T', paragraphs: ['one', 'two changed'] }]);
-    expect(r).toEqual({ scriptId, reimported: true });
+    expect(r).toEqual({ scriptId, reimported: true, orphanedCount: 1 });
     expect(cur!.doc.videos[0].sections.map((s) => [s.text, s.done])).toEqual([['one', true], ['two changed', false]]);
   });
 

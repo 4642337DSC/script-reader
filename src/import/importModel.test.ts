@@ -43,7 +43,7 @@ describe('buildVideosFromImport', () => {
     expect(v).toMatchObject({ title: 'Titlu', originalTitle: 'Titlu', group: 'Print', notes: 'Cadre: ...', originalNotes: 'Cadre: ...' });
     expect(v.sections.map((s) => [s.text, s.originalText, s.suggestedLocation, s.done, s.location, s.updatedAt])).toEqual([
       ['Prima.', '„Prima.”', 'tipografie', false, null, 5],
-      ['A doua', 'A doua', null, false, null, 5],
+      ['A doua', 'A doua', undefined, false, null, 5],
     ]);
     expect(new Set([v.id, ...v.sections.map((s) => s.id)]).size).toBe(3);
   });
