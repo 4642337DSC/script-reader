@@ -45,9 +45,11 @@ describe('shot tag icon on each card', () => {
     const [wide, medium, closeup] = [width('wide'), width('medium'), width('closeup')];
     expect(wide).toBeGreaterThan(medium);
     expect(medium).toBeGreaterThan(closeup);
-    expect(wide - medium).toBeGreaterThanOrEqual(6);
-    expect(medium - closeup).toBeGreaterThanOrEqual(5);
-    expect(wide / closeup).toBeGreaterThanOrEqual(3);
+    expect(wide - medium).toBeGreaterThanOrEqual(14);
+    expect(medium - closeup).toBeGreaterThanOrEqual(8);
+    expect(wide / closeup).toBeGreaterThanOrEqual(6);
+    expect(wide).toBeGreaterThanOrEqual(30); // nearly fills the whole icon
+    expect(closeup).toBeLessThanOrEqual(5); // a thin sliver
   });
 
   test('the three rectangles are solid and share one height, only the width changes', () => {
@@ -61,7 +63,7 @@ describe('shot tag icon on each card', () => {
     const drawn = kinds.map((k) => render(<TagIcon tag={k === 'none' ? undefined : k} />).container.querySelector('svg')!);
     expect(new Set(drawn.map((s) => s.innerHTML)).size).toBe(5);
     for (const s of drawn) {
-      expect(s.getAttribute('viewBox')).toBe('0 0 24 24');
+      expect(s.getAttribute('viewBox')).toBe('0 0 34 24');
       expect(s.getAttribute('aria-hidden')).toBe('true');
     }
   });
