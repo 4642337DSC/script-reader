@@ -34,16 +34,34 @@ describe('shot tag icon on each card', () => {
     expect(r.tagBtn(1).getAttribute('data-tag')).toBe('closeup');
   });
 
-  test('the four tags have their own name and their own line icon, all drawn in the same style', () => {
+  test('the four tags have their own name', () => {
     expect(Object.keys(TAG_INFO)).toEqual(['wide', 'medium', 'closeup', 'voiceover']);
     expect(Object.values(TAG_INFO).map((t) => t.label)).toEqual(['Wide', 'Medium', 'Close-up', 'Voiceover']);
+  });
+
+  test('wide, medium and close-up are rectangles whose width differs a lot, so they cannot be mixed up', () => {
+    const width = (tag: 'wide' | 'medium' | 'closeup') =>
+      Number(render(<TagIcon tag={tag} />).container.querySelector('svg rect')!.getAttribute('width'));
+    const [wide, medium, closeup] = [width('wide'), width('medium'), width('closeup')];
+    expect(wide).toBeGreaterThan(medium);
+    expect(medium).toBeGreaterThan(closeup);
+    expect(wide - medium).toBeGreaterThanOrEqual(6);
+    expect(medium - closeup).toBeGreaterThanOrEqual(5);
+    expect(wide / closeup).toBeGreaterThanOrEqual(3);
+  });
+
+  test('the three rectangles are solid and share one height, only the width changes', () => {
+    const rects = (['wide', 'medium', 'closeup'] as const).map((t) => render(<TagIcon tag={t} />).container.querySelector('svg rect')!);
+    expect(new Set(rects.map((r) => r.getAttribute('height'))).size).toBe(1);
+    for (const r of rects) expect(r.getAttribute('fill')).toBe('currentColor');
+  });
+
+  test('every icon is on the same 24 grid and hidden from screen readers; all five look different', () => {
     const kinds = ['none', 'wide', 'medium', 'closeup', 'voiceover'] as const;
     const drawn = kinds.map((k) => render(<TagIcon tag={k === 'none' ? undefined : k} />).container.querySelector('svg')!);
     expect(new Set(drawn.map((s) => s.innerHTML)).size).toBe(5);
     for (const s of drawn) {
       expect(s.getAttribute('viewBox')).toBe('0 0 24 24');
-      expect(s.getAttribute('fill')).toBe('none');
-      expect(s.getAttribute('stroke')).toBe('currentColor');
       expect(s.getAttribute('aria-hidden')).toBe('true');
     }
   });

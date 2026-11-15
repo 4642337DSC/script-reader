@@ -106,10 +106,10 @@ html, body { margin: 0; background: #101114; color: #e8e8ea; font-family: system
 .tag-btn { min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 0; background: none; color: #6b7280; border: 0; border-radius: 10px; cursor: pointer; }
 .tag-btn:hover, .tag-btn:active { background: #22252b; }
 .tag-btn.empty { opacity: .55; }
-.tag-btn[data-tag="wide"] { color: #7bd1a0; }
-.tag-btn[data-tag="medium"] { color: #e0c060; }
-.tag-btn[data-tag="closeup"] { color: #e8918f; }
-.tag-btn[data-tag="voiceover"] { color: #a3a8ff; }
+.tag-btn[data-tag="wide"] { color: #3ddc84; }
+.tag-btn[data-tag="medium"] { color: #ffb020; }
+.tag-btn[data-tag="closeup"] { color: #ff5a5f; }
+.tag-btn[data-tag="voiceover"] { color: #8b93ff; }
 
 /* B-roll list */
 .broll-panel { margin: 0 0 .8rem; }

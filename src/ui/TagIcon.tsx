@@ -1,11 +1,14 @@
 import type { ShotTag } from '../model/types';
 
 /**
- * Minimal line icons for the shot tags, all on one 24x24 grid with the same stroke. Wide, medium and close-up are
- * a camera frame with a figure that gets bigger (small figure, head and shoulders, just a face); voiceover is a
- * microphone with no frame. With no tag it is an empty dashed frame.
+ * Shot tag icons. Wide, medium and close-up are solid rectangles of the same height whose WIDTH changes a lot
+ * (long bar, shorter bar, small block), and each has its own colour (set in CSS), so they cannot be confused at a
+ * glance. Voiceover is a microphone with no rectangle. With no tag it is an empty dashed rectangle.
  */
-export function TagIcon({ tag, size = 20 }: { tag?: ShotTag; size?: number }) {
+const RECT_WIDTH: Record<'wide' | 'medium' | 'closeup', number> = { wide: 22, medium: 12, closeup: 5 };
+const RECT_HEIGHT = 12;
+
+export function TagIcon({ tag, size = 24 }: { tag?: ShotTag; size?: number }) {
   return (
     <svg
       data-icon={tag ?? 'none'}
@@ -25,28 +28,18 @@ export function TagIcon({ tag, size = 20 }: { tag?: ShotTag; size?: number }) {
           <path d="M6.5 11a5.5 5.5 0 0 0 11 0" />
           <path d="M12 16.5V20.5M9 20.5h6" />
         </>
+      ) : tag ? (
+        <rect
+          x={(24 - RECT_WIDTH[tag]) / 2}
+          y={(24 - RECT_HEIGHT) / 2}
+          width={RECT_WIDTH[tag]}
+          height={RECT_HEIGHT}
+          rx="2"
+          fill="currentColor"
+          stroke="none"
+        />
       ) : (
-        <>
-          <rect x="2" y="5" width="20" height="14" rx="2.5" stroke-dasharray={tag ? undefined : '2.5 2.5'} />
-          {tag === 'wide' && (
-            <>
-              <circle cx="12" cy="9.8" r="1.2" />
-              <path d="M12 11.4V14.6M12 14.6l-1.6 2.4M12 14.6l1.6 2.4" />
-            </>
-          )}
-          {tag === 'medium' && (
-            <>
-              <circle cx="12" cy="9.4" r="2.1" />
-              <path d="M7.6 19v-1.4a4.4 4.4 0 0 1 8.8 0V19" />
-            </>
-          )}
-          {tag === 'closeup' && (
-            <>
-              <circle cx="12" cy="12" r="4.8" />
-              <path d="M10.3 11.2v.2M13.7 11.2v.2" />
-            </>
-          )}
-        </>
+        <rect x="2" y="6" width="20" height="12" rx="2" stroke-dasharray="2.5 2.5" />
       )}
     </svg>
   );
