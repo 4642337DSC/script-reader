@@ -15,7 +15,7 @@ function readParagraphs(xml: string): RawPara[] {
     let text = '';
     let allBold = runs.length > 0;
     for (const r of runs) {
-      const t = Array.from(r.getElementsByTagNameNS(W, 't')).map((n) => n.textContent ?? '').join('');
+      const t = Array.from(r.childNodes).map((n) => ((n as Element).localName === 't' ? n.textContent ?? '' : (n as Element).localName === 'br' || (n as Element).localName === 'tab' ? ' ' : '')).join('');
       if (!t) continue;
       text += t;
       const b = r.getElementsByTagNameNS(W, 'b')[0];
@@ -39,7 +39,7 @@ export async function parseDocx(bytes: ArrayBuffer): Promise<ParsedVideo[]> {
     throw new Error('not a valid .docx');
   }
 
-  const isHeading = (p: RawPara) => /^(Heading\d|Title)/i.test(p.style);
+  const isHeading = (p: RawPara) => /^(Heading|Title|Titlu|Antet)/i.test(p.style);
   const hasHeadings = paras.some(isHeading);
   const isTitle = hasHeadings
     ? isHeading

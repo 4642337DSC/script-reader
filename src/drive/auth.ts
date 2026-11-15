@@ -1,7 +1,8 @@
 export const TOKEN_KEY = 'sr-google-token';
 const SCOPES = 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.appdata';
 const GIS_SRC = 'https://accounts.google.com/gsi/client';
-const TIMEOUT_MS = 10_000;
+const SILENT_TIMEOUT_MS = 10_000;
+const INTERACTIVE_TIMEOUT_MS = 180_000;
 
 declare const google: any;
 
@@ -18,7 +19,7 @@ function loadGis(): Promise<void> {
 
 function requestToken(clientId: string, interactive: boolean): Promise<{ token: string; exp: number }> {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('timeout')), TIMEOUT_MS);
+    const timer = setTimeout(() => reject(new Error('timeout')), interactive ? INTERACTIVE_TIMEOUT_MS : SILENT_TIMEOUT_MS);
     const client = google.accounts.oauth2.initTokenClient({
       client_id: clientId,
       scope: SCOPES,

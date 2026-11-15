@@ -84,3 +84,13 @@ describe('ReaderScreen', () => {
     expect((getByText('Merge with previous') as HTMLButtonElement).disabled).toBe(true);
   });
 });
+
+describe('ReaderScreen (review fixes)', () => {
+  test('C4: a new video prop (e.g. after a sync) replaces what is shown', () => {
+    const v1 = mkVideo();
+    const v2: Video = { ...v1, sections: [{ ...v1.sections[0], text: 'reworded after sync' }] };
+    const r = render(<ReaderScreen video={v1} recents={[]} fontScale={1} onFontScale={() => {}} onChange={() => {}} />);
+    r.rerender(<ReaderScreen video={v2} recents={[]} fontScale={1} onFontScale={() => {}} onChange={() => {}} />);
+    expect(r.getByText('reworded after sync')).toBeTruthy();
+  });
+});

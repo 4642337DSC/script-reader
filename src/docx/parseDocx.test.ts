@@ -47,3 +47,14 @@ describe('parseDocx', () => {
     await expect(parseDocx(new Uint8Array([1, 2, 3]).buffer)).rejects.toThrow('not a valid .docx');
   });
 });
+
+describe('parseDocx (review fixes)', () => {
+  test('I7: Romanian heading style ids (Titlu1) are titles', async () => {
+    const r = await parseDocx(await makeDocx([{ text: 'Titlu video', style: 'Titlu1' }, { text: 'corp' }]));
+    expect(r).toEqual([{ title: 'Titlu video', paragraphs: ['corp'] }]);
+  });
+  test('line breaks inside a paragraph keep the words apart', async () => {
+    const r = await parseDocx(await makeDocx([{ text: 'T', style: 'Heading1' }, { text: 'word\nnext' }]));
+    expect(r[0].paragraphs).toEqual(['word next']);
+  });
+});

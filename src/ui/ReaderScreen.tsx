@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import type { Video } from '../model/types';
 import { mergeWithPrevious, setLocation, splitSection, toggleDone } from '../model/sections';
 import { recordLocation } from '../model/recentLocations';
@@ -20,6 +20,7 @@ type Mode = { kind: 'none' } | { kind: 'menu' | 'location' | 'split'; id: string
 
 export function ReaderScreen({ video: initial, recents: initialRecents, fontScale, onFontScale, onChange, now = Date.now }: Props) {
   const [video, setVideo] = useState(initial);
+  useEffect(() => { setVideo(initial); }, [initial]);
   const [recents, setRecents] = useState(initialRecents);
   const [mode, setMode] = useState<Mode>({ kind: 'none' });
   const [undoId, setUndoId] = useState<string | null>(null);

@@ -10,7 +10,8 @@ const API = 'https://www.googleapis.com/drive/v3/files';
 const UPLOAD = 'https://www.googleapis.com/upload/drive/v3/files';
 
 async function call(token: string, url: string, init: RequestInit = {}): Promise<Response> {
-  const res = await fetch(url, { ...init, headers: { ...(init.headers as object), Authorization: `Bearer ${token}` } });
+  const signal = typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(30_000) : undefined;
+  const res = await fetch(url, { signal, ...init, headers: { ...(init.headers as object), Authorization: `Bearer ${token}` } });
   if (res.status === 401) throw new AuthExpired();
   if (!res.ok) throw new Error(`Drive ${res.status}`);
   return res;

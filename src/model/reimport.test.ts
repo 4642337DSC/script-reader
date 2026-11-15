@@ -65,3 +65,19 @@ describe('reimport', () => {
     expect(r.orphans.map((s) => s.text)).toEqual(['b']);
   });
 });
+
+describe('reimport (review fixes)', () => {
+  test('I1: inserting a video before existing ones keeps state of the others', () => {
+    let d = doc([{ title: 'A', paragraphs: ['a1'] }, { title: 'B', paragraphs: ['b1'] }]);
+    const a = toggleDone(d.videos[0], d.videos[0].sections[0].id, 2);
+    const b = toggleDone(d.videos[1], d.videos[1].sections[0].id, 2);
+    d = { ...d, videos: [a, b] };
+    const r = reimport(d, [{ title: 'X', paragraphs: ['x1'] }, { title: 'A', paragraphs: ['a1'] }, { title: 'B', paragraphs: ['b1'] }], 9);
+    expect(r.videos.map((v) => v.sections[0].done)).toEqual([false, true, true]);
+    expect(r.orphans).toEqual([]);
+  });
+  test('C3: a no-op reimport keeps the old updatedAt', () => {
+    const d = doc([{ title: 'T', paragraphs: ['one'] }]);
+    expect(reimport(d, [{ title: 'T', paragraphs: ['one'] }], 999).updatedAt).toBe(1);
+  });
+});
