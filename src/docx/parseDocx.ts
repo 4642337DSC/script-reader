@@ -1,5 +1,6 @@
 import JSZip from 'jszip';
 import type { ParsedVideo } from '../model/types';
+import type { SourceParagraph } from '../ai/classify';
 
 const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
 const MAX_BOLD_TITLE = 120;
@@ -28,16 +29,25 @@ function readParagraphs(xml: string): RawPara[] {
   return out.filter((p) => p.text.length > 0);
 }
 
-export async function parseDocx(bytes: ArrayBuffer): Promise<ParsedVideo[]> {
-  let paras: RawPara[];
+async function loadParagraphs(bytes: ArrayBuffer): Promise<RawPara[]> {
   try {
     const zip = await JSZip.loadAsync(bytes);
     const file = zip.file('word/document.xml');
     if (!file) throw new Error('no document.xml');
-    paras = readParagraphs(await file.async('string'));
+    return readParagraphs(await file.async('string'));
   } catch {
     throw new Error('not a valid .docx');
   }
+}
+
+/** Every non-empty paragraph with its heading style and bold flag, for AI classification. */
+export async function readDocxParagraphs(bytes: ArrayBuffer): Promise<SourceParagraph[]> {
+  const paras = await loadParagraphs(bytes);
+  return paras.map((p, index) => ({ index, text: p.text, style: p.style, bold: p.allBold }));
+}
+
+export async function parseDocx(bytes: ArrayBuffer): Promise<ParsedVideo[]> {
+  const paras = await loadParagraphs(bytes);
 
   const isHeading = (p: RawPara) => /^(Heading|Title|Titlu|Antet)/i.test(p.style);
   const hasHeadings = paras.some(isHeading);
