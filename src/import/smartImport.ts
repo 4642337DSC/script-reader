@@ -25,6 +25,7 @@ export async function smartImport(bytes: ArrayBuffer, deps: SmartImportDeps): Pr
     if (paragraphs.length === 0) throw new AiUnavailable('invalid', 'empty document');
     const videos = assembleImport(paragraphs, await deps.classify(paragraphs));
     if (videos.length === 0) throw new AiUnavailable('invalid', 'no videos found');
+    if (videos.every((v) => v.paragraphs.length === 0)) throw new AiUnavailable('invalid', 'no spoken text found');
     return { videos, mode: 'ai' };
   } catch (e) {
     const err = e instanceof AiUnavailable ? e : new AiUnavailable('network', e instanceof Error ? e.message : String(e));

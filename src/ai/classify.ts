@@ -57,6 +57,42 @@ export function buildClassifyRequest(paragraphs: SourceParagraph[]): { prompt: s
   return { prompt, schema };
 }
 
+const startsWithQuote = (s: string) => /^[„"“«]/.test(s.trim());
+const wordCount = (s: string) => s.trim().split(/\s+/).filter(Boolean).length;
+const SHORT_LINE = (s: string) => s.trim().length <= 80 && wordCount(s) <= 10 && !startsWithQuote(s);
+const FURNITURE = /^[\d\s.\-–—|•*_=)(:]+$/;
+
+/**
+ * A glued filming cue is only accepted when it is clearly a short phrase at the very start of the paragraph:
+ * at most 60 characters and 8 words, no digits or sentence punctuation, ending at a word boundary, and the rest
+ * must begin like a new sentence. Anything else would cut spoken words off, so the cue is dropped.
+ */
+export function validCue(paragraph: string, cue: string): boolean {
+  const text = paragraph.trimStart();
+  if (!cue || !text.startsWith(cue)) return false;
+  if (cue.length > 60 || wordCount(cue) > 8 || startsWithQuote(cue) || /[\d.!?;:]/.test(cue)) return false;
+  const next = text.charAt(cue.length);
+  if (!/\s/.test(next)) return false;
+  const remainder = text.slice(cue.length).trim();
+  return remainder.length >= 3 && /^[\p{Lu}\p{N}„"“«]/u.test(remainder);
+}
+
+/** Downgrades labels that would make text vanish or be misused; doubt always ends up as spoken text or Notes. */
+function effectiveLabel(l: AiLabel, p: SourceParagraph): AiLabelName {
+  const text = p.text.trim();
+  switch (l.label) {
+    case 'group':
+    case 'cue':
+      return SHORT_LINE(text) ? l.label : 'spoken';
+    case 'title':
+      return text.length <= 200 && !startsWithQuote(text) ? 'title' : 'spoken';
+    case 'ignore':
+      return text.length <= 12 || FURNITURE.test(text) ? 'ignore' : 'notes';
+    default:
+      return l.label;
+  }
+}
+
 /**
  * Checks the model's answer. Returns one label per paragraph (missing ones default to `spoken`),
  * or null when the answer is unusable.
@@ -71,10 +107,8 @@ export function validateLabels(raw: unknown, paragraphs: SourceParagraph[]): AiL
     if (typeof label !== 'string' || !LABELS.includes(label as AiLabelName)) continue;
     if (byIndex.has(i)) continue;
     const out: AiLabel = { i, label: label as AiLabelName };
-    if (typeof cue === 'string' && cue.trim() && label === 'spoken') {
-      const text = paragraphs[i].text.trimStart();
-      const c = cue.trim();
-      if (text.startsWith(c) && c.length < text.trim().length) out.cue = c;
+    if (typeof cue === 'string' && cue.trim() && label === 'spoken' && validCue(paragraphs[i].text, cue.trim())) {
+      out.cue = cue.trim();
     }
     byIndex.set(i, out);
   }
@@ -103,8 +137,14 @@ export function assembleImport(paragraphs: SourceParagraph[], labels: AiLabel[])
   };
 
   for (const p of paragraphs) {
-    const l = byIndex.get(p.index) ?? { i: p.index, label: 'spoken' as const };
+    const raw = byIndex.get(p.index) ?? { i: p.index, label: 'spoken' as const };
+    const l: AiLabel = { ...raw, label: effectiveLabel(raw, p) };
     const text = p.text.trim();
+    const addNote = (v: ImportedVideo, line: string) => {
+      const parts = noteParts.get(v) ?? [];
+      parts.push(line);
+      noteParts.set(v, parts);
+    };
     switch (l.label) {
       case 'group':
         group = text;
@@ -120,19 +160,18 @@ export function assembleImport(paragraphs: SourceParagraph[], labels: AiLabel[])
         break;
       }
       case 'notes':
-      case 'publish': {
-        const v = ensureVideo();
-        const parts = noteParts.get(v) ?? [];
-        parts.push(text);
-        noteParts.set(v, parts);
+      case 'publish':
+        addNote(ensureVideo(), text);
         break;
-      }
       case 'cue':
+        // the cue text stays visible in Notes as well as becoming a suggestion
+        addNote(ensureVideo(), text);
         standaloneCue = cleanCue(text) || null;
         break;
       case 'spoken': {
         const v = ensureVideo();
-        if (l.cue) {
+        if (l.cue && validCue(text, l.cue)) {
+          addNote(v, l.cue);
           const remainder = text.replace(/^\s+/, '').slice(l.cue.length).trim();
           v.paragraphs.push({ source: text, text: stripOuterQuotes(remainder), suggestedLocation: cleanCue(l.cue) || null });
           standaloneCue = null;

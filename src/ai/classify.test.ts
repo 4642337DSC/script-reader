@@ -17,7 +17,7 @@ describe('assembleImport on the fixture', () => {
       ['Example Print', '4. The wedding starts with an envelope'],
       ['Example Print', 'Video 5'],
       ['Example Shop', '6. Three gifts for people who love to create'],
-      ['Example Shop', '11. Example.ro · The story began in Gorj'],
+      ['Example Shop', '11. Example.ro · The story began long ago'],
     ]);
   });
 
@@ -41,14 +41,16 @@ describe('assembleImport on the fixture', () => {
     expect(videos[4].paragraphs[0].text.startsWith('We are going digital')).toBe(true);
   });
 
-  test('the anniversary film: metadata lines are notes, standalone cue applies to what follows, glued cues are split', () => {
+  test('the anniversary film: metadata and cue lines are kept in Notes, a standalone cue applies to what follows, glued cues are split', () => {
     const film = videos[6];
-    expect(film.notes).toBe(`${paragraphs[21].text}\n\n${paragraphs[22].text}`);
+    expect(film.notes).toBe(
+      [paragraphs[21].text, paragraphs[22].text, paragraphs[23].text, 'Filmare tipografie', 'Filmare pvc'].join('\n\n'),
+    );
     expect(film.paragraphs.map((p) => [p.text, p.suggestedLocation ?? null])).toEqual([
-      ['„In 1992 the story began with a stationery shop, with things people needed every day.', 'SHOP EXAMPLE'],
-      ["In 1994 we opened the print shop. We put clients' ideas on paper.", 'tipografie'],
-      ['In 2000 we entered PVC joinery.', 'pvc'],
-      ['This year we turn 35. Thank you all.”', null],
+      ['„In the beginning the story started with a stationery shop, with things people needed every day.', 'SHOP EXAMPLE'],
+      ["We opened the print shop. We put clients' ideas on paper.", 'tipografie'],
+      ['We moved into window making.', 'pvc'],
+      ['Today we are older and wiser. Thank you all.”', null],
     ]);
     expect(film.paragraphs[1].source).toBe(paragraphs[25].text);
   });
@@ -60,6 +62,38 @@ describe('assembleImport on the fixture', () => {
     ];
     const v = assembleImport(p, [{ i: 0, label: 'spoken' }, { i: 1, label: 'title' }]);
     expect(v.map((x) => [x.title, x.paragraphs.length])).toEqual([['Untitled', 1], ['Empty video', 0]]);
+  });
+});
+
+describe('assembleImport never loses text because of a doubtful label', () => {
+  const mk = (rows: [string, string, boolean, AiLabel['label']][]) => {
+    const ps = rows.map(([text, style, bold], index) => ({ index, text, style, bold }));
+    return { ps, labels: rows.map(([, , , label], i): AiLabel => ({ i, label })) };
+  };
+  const longSpoken = '„Aceasta este o propoziție lungă care se citește cu voce tare și nu este deloc un indiciu de filmare sau un titlu.”';
+
+  test('a long spoken paragraph labelled cue, group or title stays spoken', () => {
+    for (const wrong of ['cue', 'group', 'title'] as const) {
+      const { ps, labels } = mk([['1. Titlu', 'Heading3', true, 'title'], [longSpoken, '', false, wrong]]);
+      const v = assembleImport(ps, labels);
+      expect(v.flatMap((x) => x.paragraphs.map((p) => p.source))).toContain(longSpoken);
+    }
+  });
+
+  test('a long paragraph labelled ignore is kept in Notes; a page number is dropped', () => {
+    const { ps, labels } = mk([['1. Titlu', 'Heading3', true, 'title'], [longSpoken, '', false, 'ignore'], ['12', '', false, 'ignore']]);
+    const [v] = assembleImport(ps, labels);
+    expect(v.notes).toBe(longSpoken);
+    expect(v.paragraphs).toHaveLength(0);
+  });
+
+  test('every source paragraph ends up somewhere (title, group, spoken or notes) except page-number-like ignores', () => {
+    const { ps, labels } = mk([
+      ['Print', 'Heading2', true, 'group'], ['1. Titlu', 'Heading3', true, 'title'], [longSpoken, '', false, 'cue'],
+      ['Cadre: x', '', true, 'notes'], ['3', '', false, 'ignore'],
+    ]);
+    const out = JSON.stringify(assembleImport(ps, labels));
+    for (const t of ['Print', '1. Titlu', 'Aceasta este o propoziție lungă', 'Cadre: x']) expect(out).toContain(t);
   });
 });
 
@@ -80,6 +114,22 @@ describe('validateLabels', () => {
     expect(validateLabels(raw, paragraphs)![25].cue).toBeUndefined();
     const whole = fixtureLabels().map((l) => (l.i === 26 ? { ...l, cue: paragraphs[26].text } : l));
     expect(validateLabels(whole, paragraphs)![26].cue).toBeUndefined();
+  });
+
+  test.each([
+    ['a cue that cuts a word in half', '„Filmare tip', 'Filmare tipografie În 2 ani am început.'],
+    ['a cue that swallows spoken words (digits)', 'Filmare tipografie În 1994 am', 'Filmare tipografie În 1994 am deschis tipografia.'],
+    ['a cue followed by lowercase text (not a new sentence)', 'Filmare tipografie în', 'Filmare tipografie în noul an am deschis.'],
+    ['a cue with sentence punctuation', 'Filmare tipografie.', 'Filmare tipografie. Apoi am început.'],
+    ['a very long cue', 'x'.repeat(61), 'x'.repeat(61) + ' Urmează textul.'],
+  ])('%s is dropped', (_name, cue, text) => {
+    const ps = [{ index: 0, text, style: '', bold: false }, { index: 1, text: 'altceva', style: '', bold: false }];
+    expect(validateLabels([{ i: 0, label: 'spoken', cue }, { i: 1, label: 'spoken' }], ps)![0].cue).toBeUndefined();
+  });
+
+  test('a sensible cue at a word boundary followed by a new sentence is kept', () => {
+    const ps = [{ index: 0, text: 'Filmare tipografie Am deschis tipografia în orașul nostru.', style: '', bold: false }];
+    expect(validateLabels([{ i: 0, label: 'spoken', cue: 'Filmare tipografie' }], ps)![0].cue).toBe('Filmare tipografie');
   });
 
   test('anything that is not an array, or covers under half the paragraphs, is rejected', () => {

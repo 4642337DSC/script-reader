@@ -55,6 +55,13 @@ describe('smartImport', () => {
     expect(r.mode).toBe('basic');
   });
 
+  test('an answer with no spoken text at all (everything labelled notes) counts as invalid', async () => {
+    const allNotes: Classifier = async (ps) => ps.map((p) => ({ i: p.index, label: 'notes' as const }));
+    const r = await smartImport(await doc(), { classify: allNotes, scriptExists: false });
+    expect(r.mode).toBe('basic');
+    await expect(smartImport(await doc(), { classify: allNotes, scriptExists: true })).rejects.toMatchObject({ reason: 'invalid' });
+  });
+
   test('a corrupt file still rejects with the usual message', async () => {
     await expect(smartImport(new Uint8Array([1, 2, 3]).buffer, { classify: labelByText, scriptExists: false })).rejects.toThrow('not a valid .docx');
   });
