@@ -2,6 +2,7 @@ import type { ComponentChildren } from 'preact';
 import type { Video } from '../model/types';
 import { SectionView, type WordCtl } from './SectionView';
 import type { Rect } from './placePopover';
+import { AutoSaveText } from './AutoSaveText';
 
 export const MIN_SCALE = 0.75;
 export const MAX_SCALE = 3;
@@ -21,6 +22,9 @@ interface Props {
   onJoin: (sectionId: string) => void;
   onFontScale: (scale: number) => void;
   onEditTitle?: () => void;
+  editingTitle?: boolean;
+  onSaveTitle?: (title: string) => void;
+  onCancelTitle?: () => void;
   onAcceptSuggestion?: (id: string) => void;
   onDismissSuggestion?: (id: string) => void;
   afterHeader?: ComponentChildren;
@@ -35,7 +39,7 @@ function Gap({ index, over, joinId, onJoin }: { index: number; over: boolean; jo
 }
 
 export function Reader({
-  video, fontScale, ctl, over, message, canUndo, onUndo, onToggleDone, onOpenLocation, onJoin, onFontScale, onEditTitle,
+  video, fontScale, ctl, over, message, canUndo, onUndo, onToggleDone, onOpenLocation, onJoin, onFontScale, onEditTitle, editingTitle, onSaveTitle, onCancelTitle,
   onAcceptSuggestion, onDismissSuggestion, afterHeader,
 }: Props) {
   const clamp = (n: number) => Math.min(MAX_SCALE, Math.max(MIN_SCALE, n));
@@ -43,8 +47,12 @@ export function Reader({
   return (
     <div class="reader" style={{ '--scale': String(fontScale) } as any}>
       <header class="reader-head">
-        <h1>{video.title}</h1>
-        {onEditTitle && <button class="edit-title" aria-label="Edit title" onClick={onEditTitle}>✎</button>}
+        {editingTitle && onSaveTitle && onCancelTitle ? (
+          <AutoSaveText initial={video.title} label="Title" multiline={false} onSave={onSaveTitle} onCancel={onCancelTitle} />
+        ) : (
+          <h1>{video.title}</h1>
+        )}
+        {onEditTitle && !editingTitle && <button class="edit-title" aria-label="Edit title" onClick={onEditTitle}>✎</button>}
         <div class="font-ctl">
           {onUndo && <button class="undo-btn" aria-label="Undo" disabled={!canUndo} onClick={onUndo}>↶</button>}
           <button aria-label="Smaller text" onClick={() => onFontScale(clamp(fontScale - STEP))}>A−</button>

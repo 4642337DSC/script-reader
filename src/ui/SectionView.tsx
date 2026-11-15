@@ -1,7 +1,7 @@
-import { useState } from 'preact/hooks';
 import type { Section } from '../model/types';
 import { wordsOf } from '../model/wordMoves';
 import type { Rect } from './placePopover';
+import { AutoSaveText } from './AutoSaveText';
 
 /** Everything the words of a paragraph need from the screen that owns the selection. */
 export interface WordCtl {
@@ -27,21 +27,9 @@ interface Props {
 }
 
 function InlineEdit({ initial, onSave, onCancel }: { initial: string; onSave: (t: string) => void; onCancel: () => void }) {
-  const [text, setText] = useState(initial);
   return (
     <div class="inline-edit">
-      <textarea
-        class="edit-box"
-        aria-label="Section text"
-        value={text}
-        rows={4}
-        autoFocus
-        onInput={(e) => setText((e.target as HTMLTextAreaElement).value)}
-      />
-      <div class="chips">
-        <button class="chip" disabled={text.trim().length === 0} onClick={() => onSave(text)}>Save</button>
-        <button class="chip" onClick={onCancel}>Cancel</button>
-      </div>
+      <AutoSaveText initial={initial} label="Section text" onSave={onSave} onCancel={onCancel} />
     </div>
   );
 }

@@ -132,24 +132,29 @@ describe('split, merge, edit in place', () => {
     expect(r.lastTexts()).toEqual([`${P1} ${P2}`, P3]);
   });
 
-  test('the pencil turns the paragraph into a text box in place; Save applies it', () => {
+  test('the pencil turns the paragraph into a text box in place; tapping away saves it', () => {
     const r = setup();
     fireEvent.click(r.container.querySelectorAll('.edit-btn')[1]);
     const box = r.getByLabelText('Section text') as HTMLTextAreaElement;
     expect(box.value).toBe(P2);
     expect(r.container.querySelector('.mw-overlay')).toBeNull();
+    expect(r.queryByText('Save')).toBeNull();
     fireEvent.input(box, { target: { value: 'second para fixed' } });
-    fireEvent.click(r.getByText('Save'));
+    fireEvent.pointerDown(document.body);
     expect(r.lastTexts()[1]).toBe('second para fixed');
     expect(r.queryByLabelText('Section text')).toBeNull();
   });
 
-  test('a blank text cannot be saved, and Cancel restores the paragraph', () => {
+  test('a blank text is not saved and Escape restores the paragraph', () => {
     const r = setup();
     fireEvent.click(r.container.querySelectorAll('.edit-btn')[1]);
     fireEvent.input(r.getByLabelText('Section text'), { target: { value: '   ' } });
-    expect((r.getByText('Save') as HTMLButtonElement).disabled).toBe(true);
-    fireEvent.click(r.getByText('Cancel'));
+    fireEvent.pointerDown(document.body);
+    expect(paraTexts(r.container)).toEqual([P1, P2, P3]);
+    expect(r.onChange).not.toHaveBeenCalled();
+    fireEvent.click(r.container.querySelectorAll('.edit-btn')[1]);
+    fireEvent.input(r.getByLabelText('Section text'), { target: { value: 'discard me' } });
+    fireEvent.keyDown(r.getByLabelText('Section text'), { key: 'Escape' });
     expect(paraTexts(r.container)).toEqual([P1, P2, P3]);
     expect(r.onChange).not.toHaveBeenCalled();
   });

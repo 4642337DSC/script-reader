@@ -40,17 +40,16 @@ describe('editing', () => {
     const box = w.getByLabelText('Section text') as HTMLTextAreaElement;
     expect(box.value).toBe('first para');
     fireEvent.input(box, { target: { value: 'first para (fixed)' } });
-    fireEvent.click(w.getByText('Save'));
+    fireEvent.pointerDown(document.body);
     await waitFor(() => expect(para(w.container, 'first para (fixed)')).toBeTruthy());
     await waitFor(() => expect(w.cur().doc.videos[0].sections[0]).toMatchObject({ text: 'first para (fixed)', originalText: 'first para' }));
   });
 
-  test('blank text cannot be saved and Cancel changes nothing', async () => {
+  test('blank text is not saved and the old text stays', async () => {
     const w = await open();
     fireEvent.click(w.container.querySelectorAll('.edit-btn')[0]);
     fireEvent.input(w.getByLabelText('Section text'), { target: { value: '   ' } });
-    expect((w.getByText('Save') as HTMLButtonElement).disabled).toBe(true);
-    fireEvent.click(w.getByText('Cancel'));
+    fireEvent.pointerDown(document.body);
     expect(w.queryByLabelText('Section text')).toBeNull();
     expect(para(w.container, 'first para')).toBeTruthy();
     expect(w.cur().doc.videos[0].sections[0].text).toBe('first para');
@@ -60,7 +59,7 @@ describe('editing', () => {
     const w = await open();
     fireEvent.click(w.getByLabelText('Edit title'));
     fireEvent.input(w.getByLabelText('Title'), { target: { value: 'Vid renamed' } });
-    fireEvent.click(w.getByText('Save'));
+    fireEvent.keyDown(w.getByLabelText('Title'), { key: 'Enter' });
     expect(await w.findByText('Vid renamed')).toBeTruthy();
     await waitFor(() => expect(w.cur().doc.videos[0]).toMatchObject({ title: 'Vid renamed', originalTitle: 'Vid' }));
   });
@@ -72,12 +71,12 @@ describe('editing', () => {
     expect(w.getByText('Cadre: x')).toBeTruthy();
     fireEvent.click(w.getByText('Edit notes'));
     fireEvent.input(w.getByLabelText('Notes text'), { target: { value: 'Cadre: y' } });
-    fireEvent.click(w.getByText('Save'));
+    fireEvent.pointerDown(document.body);
     expect(await w.findByText('Cadre: y')).toBeTruthy();
     await waitFor(() => expect(w.cur().doc.videos[0]).toMatchObject({ notes: 'Cadre: y', originalNotes: 'Cadre: x' }));
     fireEvent.click(w.getByText('Edit notes'));
     fireEvent.input(w.getByLabelText('Notes text'), { target: { value: '' } });
-    fireEvent.click(w.getByText('Save'));
+    fireEvent.pointerDown(document.body);
     expect(await w.findByText('No notes')).toBeTruthy();
   });
 

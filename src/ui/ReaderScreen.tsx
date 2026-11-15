@@ -7,7 +7,6 @@ import { carveWordsIntoSection, moveWordsToAdjacentSection } from '../model/word
 import { recordLocation } from '../model/recentLocations';
 import { Reader } from './Reader';
 import { LocationSheet } from './LocationSheet';
-import { EditText } from './EditText';
 import { NotesPanel } from './NotesPanel';
 import type { WordCtl } from './SectionView';
 import type { Rect } from './placePopover';
@@ -226,6 +225,9 @@ export function ReaderScreen({
         onOpenLocation={(id, anchor) => setMode({ kind: 'location', id, anchor })}
         onJoin={(id) => commit(mergeWithPrevious(video, id, now()))}
         onEditTitle={() => setMode({ kind: 'title' })}
+        editingTitle={mode.kind === 'title'}
+        onSaveTitle={(t) => { commit(setVideoTitle(video, t)); setMode({ kind: 'none' }); }}
+        onCancelTitle={() => setMode({ kind: 'none' })}
         onAcceptSuggestion={(id) => {
           const s = video.sections.find((x) => x.id === id);
           if (s?.suggestedLocation) commit(acceptSuggestion(video, id, now()), recordLocation(recents, s.suggestedLocation));
@@ -233,14 +235,6 @@ export function ReaderScreen({
         onDismissSuggestion={(id) => commit(dismissSuggestion(video, id, now()))}
         afterHeader={<NotesPanel notes={video.notes ?? ''} onSave={(n) => commit(setVideoNotes(video, n))} />}
       />
-      {mode.kind === 'title' && (
-        <EditText
-          initial={video.title}
-          label="Title"
-          onSave={(t) => { commit(setVideoTitle(video, t)); setMode({ kind: 'none' }); }}
-          onCancel={() => setMode({ kind: 'none' })}
-        />
-      )}
       {locSection && (
         <LocationSheet
           recents={recents}
