@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Video } from '../model/types';
 import {
-  acceptSuggestion, cycleTag, dismissSuggestion, mergeWithPrevious, setLocation, setText, setVideoNotes, setVideoTitle, splitSection, toggleDone,
+  acceptSuggestion, addBroll, cycleTag, dismissSuggestion, mergeWithPrevious, removeBroll, setBrollText, setLocation, setText, setVideoNotes, setVideoTitle, splitSection, toggleBroll, toggleDone,
 } from '../model/sections';
 import { carveWordsIntoSection, moveWordsToAdjacentSection } from '../model/wordMoves';
 import { recordLocation } from '../model/recentLocations';
 import { Reader } from './Reader';
 import { LocationSheet } from './LocationSheet';
 import { NotesPanel } from './NotesPanel';
+import { BrollPanel } from './BrollPanel';
 import type { WordCtl } from './SectionView';
 import type { Rect } from './placePopover';
 
@@ -33,7 +34,7 @@ const HISTORY_LIMIT = 20;
 
 /** What counts as "the same video" when deciding whether someone else changed it (ignores bookkeeping fields). */
 const fingerprint = (v: Video) =>
-  JSON.stringify([v.title, v.notes ?? '', v.sections.map((s) => [s.id, s.text, s.location, s.done])]);
+  JSON.stringify([v.title, v.notes ?? '', v.sections.map((s) => [s.id, s.text, s.location, s.done, s.tag ?? null]), (v.broll ?? []).map((b) => [b.id, b.text, b.done])]);
 
 /**
  * The reading screen is also the editing screen, like the caption editor: tap words to select them, drag them onto
@@ -234,7 +235,18 @@ export function ReaderScreen({
           if (s?.suggestedLocation) commit(acceptSuggestion(video, id, now()), recordLocation(recents, s.suggestedLocation));
         }}
         onDismissSuggestion={(id) => commit(dismissSuggestion(video, id, now()))}
-        afterHeader={<NotesPanel notes={video.notes ?? ''} onSave={(n) => commit(setVideoNotes(video, n))} />}
+        afterHeader={(
+          <>
+            <NotesPanel notes={video.notes ?? ''} onSave={(n) => commit(setVideoNotes(video, n))} />
+            <BrollPanel
+              items={video.broll ?? []}
+              onToggle={(id) => commit(toggleBroll(video, id, now()))}
+              onEditText={(id, t) => commit(setBrollText(video, id, t, now()))}
+              onRemove={(id) => commit(removeBroll(video, id))}
+              onAdd={(t) => commit(addBroll(video, t, now()))}
+            />
+          </>
+        )}
       />
       {locSection && (
         <LocationSheet

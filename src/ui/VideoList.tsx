@@ -23,12 +23,14 @@ export function VideoList({ repo, clientId, scriptId, go, onError }: Props) {
         const showGroup = !!v.group && v.group !== prevGroup;
         const done = v.sections.filter((s) => s.done).length;
         const locs = [...new Set(v.sections.map((s) => s.location).filter(Boolean))].join(', ');
+        const shots = v.broll ?? [];
+        const shotsDone = shots.filter((b) => b.done).length;
         return (
           <div key={v.id}>
           {showGroup && <h3 class="group-head">{v.group}</h3>}
           <button class="list-item" onClick={() => go(`#/c/${clientId}/s/${scriptId}/v/${v.id}`)}>
             {v.title}
-            <small>{done}/{v.sections.length} done{locs ? ` · ${locs}` : ''}</small>
+            <small>{done}/{v.sections.length} done{locs ? ` · ${locs}` : ''}{shots.length ? ` · B-roll ${shotsDone}/${shots.length}` : ''}</small>
           </button>
           </div>
         );

@@ -110,3 +110,14 @@ html, body { margin: 0; background: #101114; color: #e8e8ea; font-family: system
 .tag-btn[data-tag="closeup"] { background: #3a2a2a; }
 .tag-btn[data-tag="voiceover"] { background: #2a2a45; }
 .tag-name { font-size: .75rem; opacity: .9; }
+
+/* B-roll list */
+.broll-panel { margin: 0 0 .8rem; }
+.broll-toggle { min-height: 44px; background: #22252b; color: #c9b458; border: 0; border-radius: 8px; padding: 0 1rem; margin-left: .4rem; }
+.broll-body { background: #1b1d22; border-radius: 10px; padding: .4rem .8rem; margin-top: .4rem; }
+.broll-item { display: flex; align-items: center; gap: .5rem; min-height: 44px; }
+.broll-check { flex: 0 0 32px; width: 32px; height: 32px; border-radius: 8px; border: 2px solid #555; background: none; color: #4caf50; font-size: 1.1rem; padding: 0; }
+.broll-check[aria-checked="true"] { border-color: #4caf50; background: #1f3326; }
+.broll-text { flex: 1; min-width: 0; overflow-wrap: anywhere; cursor: pointer; padding: .5rem 0; }
+.broll-text.done { text-decoration: line-through; opacity: .5; }
+.broll-x { min-width: 44px; min-height: 44px; background: none; border: 0; color: #8a8f99; font-size: 1rem; }
