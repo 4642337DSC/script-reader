@@ -3,6 +3,7 @@ import type { AuthUser, Client, Repo, RepoError } from '../data/types';
 import { parseRoute, useHash } from './useHash';
 import { ScriptList } from './ScriptList';
 import { VideoList } from './VideoList';
+import { ReaderRoute } from './ReaderRoute';
 
 interface Props { repo: Repo; user: AuthUser; onSignOut: () => void }
 
@@ -46,5 +47,6 @@ export function Shell({ repo, user, onSignOut }: Props) {
   }
   if (route.name === 'scripts') return <>{topbar}<ScriptList repo={repo} clientId={route.c} go={go} onError={onError} /></>;
   if (route.name === 'videos') return <>{topbar}<VideoList repo={repo} clientId={route.c} scriptId={route.s} go={go} onError={onError} /></>;
+  if (route.name === 'reader') return <>{topbar}<ReaderRoute repo={repo} clientId={route.c} scriptId={route.s} videoId={route.v} onError={onError} /></>;
   return <>{topbar}<p>…</p></>;
 }

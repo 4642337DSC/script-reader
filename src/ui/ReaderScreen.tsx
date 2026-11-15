@@ -22,6 +22,7 @@ export function ReaderScreen({ video: initial, recents: initialRecents, fontScal
   const [video, setVideo] = useState(initial);
   useEffect(() => { setVideo(initial); }, [initial]);
   const [recents, setRecents] = useState(initialRecents);
+  useEffect(() => { setRecents(initialRecents); }, [initialRecents]);
   const [mode, setMode] = useState<Mode>({ kind: 'none' });
   const [undoId, setUndoId] = useState<string | null>(null);
 
