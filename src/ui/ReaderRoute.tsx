@@ -9,6 +9,7 @@ interface Props {
   scriptId: string;
   videoId: string;
   onError: (e: RepoError) => void;
+  onNotice: (message: string) => void;
 }
 
 const loadScale = () => {
@@ -16,7 +17,7 @@ const loadScale = () => {
   return n >= 0.75 && n <= 3 ? n : 1;
 };
 
-export function ReaderRoute({ repo, clientId, scriptId, videoId, onError }: Props) {
+export function ReaderRoute({ repo, clientId, scriptId, videoId, onError, onNotice }: Props) {
   const [data, setData] = useState<ScriptData | null | undefined>(undefined);
   const [recents, setRecents] = useState<string[]>([]);
   const [fontScale, setFontScale] = useState(loadScale);
@@ -33,7 +34,10 @@ export function ReaderRoute({ repo, clientId, scriptId, videoId, onError }: Prop
   const onChange = (v: Video, r: string[]) => {
     const base = latest.current ?? data;
     const doc = { ...base.doc, videos: base.doc.videos.map((x) => (x.id === v.id ? v : x)) };
-    void repo.saveScript(clientId, scriptId, base, doc);
+    void repo.saveScript(clientId, scriptId, base, doc).then((res) => {
+      const n = res.droppedOnReject;
+      if (n) onNotice(`${n} ${n === 1 ? "change wasn't" : "changes weren't"} saved because access was removed.`);
+    });
     if (r[0] && r[0] !== recents[0]) void repo.addRecent(clientId, r[0]);
   };
 

@@ -33,3 +33,7 @@ html, body { margin: 0; background: #101114; color: #e8e8ea; font-family: system
 .client-card { background: #1b1d22; border-radius: 10px; padding: .6rem 1rem; margin: .8rem 0; }
 .client-card h3 { margin: 0; overflow-wrap: anywhere; }
 .client-card button { min-height: 44px; background: #2a2e36; color: inherit; border: 0; border-radius: 8px; padding: 0 .8rem; margin-left: .3rem; }
+
+.script-row { display: flex; align-items: center; gap: .4rem; }
+.script-row .list-item { flex: 1; }
+.del-btn { min-height: 44px; background: #3a2226; color: #ffb4b4; border: 0; border-radius: 8px; padding: 0 .8rem; }

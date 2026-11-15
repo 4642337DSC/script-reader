@@ -7,9 +7,10 @@ interface Props {
   clientId: string;
   go: (hash: string) => void;
   onError: (e: RepoError) => void;
+  isAdmin: boolean;
 }
 
-export function ScriptList({ repo, clientId, go, onError }: Props) {
+export function ScriptList({ repo, clientId, go, onError, isAdmin }: Props) {
   const [scripts, setScripts] = useState<ScriptSummary[] | null>(null);
   useEffect(() => repo.watchScripts(clientId, setScripts, onError), [repo, clientId]);
   if (!scripts) return <p>Loading…</p>;
@@ -18,10 +19,21 @@ export function ScriptList({ repo, clientId, go, onError }: Props) {
       <AddScript repo={repo} clientId={clientId} />
       {scripts.length === 0 && <p>No scripts yet — tap + to add one.</p>}
       {scripts.map((s) => (
-        <button class="list-item" key={s.id} onClick={() => go(`#/c/${clientId}/s/${s.id}`)}>
-          {s.name}
-          <small>{s.videoCount} {s.videoCount === 1 ? 'video' : 'videos'}</small>
-        </button>
+        <div class="script-row" key={s.id}>
+          <button class="list-item" onClick={() => go(`#/c/${clientId}/s/${s.id}`)}>
+            {s.name}
+            <small>{s.videoCount} {s.videoCount === 1 ? 'video' : 'videos'}</small>
+          </button>
+          {isAdmin && (
+            <button
+              class="del-btn"
+              aria-label={`Delete ${s.name}`}
+              onClick={() => {
+                if (window.confirm(`Delete ${s.name} for everyone?`)) void repo.deleteScript(clientId, s.id);
+              }}
+            >Delete</button>
+          )}
+        </div>
       ))}
     </>
   );

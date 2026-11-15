@@ -5,6 +5,8 @@ import { ScriptList } from './ScriptList';
 import { VideoList } from './VideoList';
 import { ReaderRoute } from './ReaderRoute';
 import { AdminScreen } from './AdminScreen';
+import { OrphansView } from './OrphansView';
+import { SyncBadge } from './SyncBadge';
 
 interface Props { repo: Repo; user: AuthUser; onSignOut: () => void }
 
@@ -13,34 +15,49 @@ export function Shell({ repo, user, onSignOut }: Props) {
   const route = parseRoute(hash);
   const [clients, setClients] = useState<Client[] | null>(null);
   const [clientsError, setClientsError] = useState<RepoError | null>(null);
-
   const [admin, setAdmin] = useState<boolean | null>(null);
+  const [notice, setNotice] = useState('');
 
   useEffect(() => repo.watchClients(setClients, setClientsError), [repo]);
   useEffect(() => { void repo.isAdmin().then(setAdmin); }, [repo]);
   useEffect(() => { if (route.name === 'admin' && admin === false) go('#/'); }, [route.name, admin]);
+
+  const onError = (e: RepoError) => {
+    if (e.code === 'permission-denied') {
+      setNotice('You no longer have access to this client.');
+      go('#/');
+    } else {
+      setClientsError(e);
+    }
+  };
 
   const backTo =
     route.name === 'scripts' || route.name === 'admin' ? '#/'
     : route.name === 'videos' ? `#/c/${route.c}`
     : route.name === 'reader' || route.name === 'orphans' ? `#/c/${route.c}/s/${route.s}`
     : null;
-  const onError = (e: RepoError) => setClientsError(e);
+
   const topbar = (
     <div class="topbar">
       {backTo !== null ? <button onClick={() => go(backTo)}>← Back</button> : <strong>Script Reader</strong>}
-      <span class="status">{user.email}</span>
+      <SyncBadge repo={repo} />
       <button onClick={onSignOut}>Sign out</button>
     </div>
   );
+  const noticeBar = notice ? (
+    <div class="toast" role="alert">
+      <span>{notice}</span>
+      <button onClick={() => setNotice('')}>OK</button>
+    </div>
+  ) : null;
 
-  if (clientsError) return <>{topbar}<p>Couldn't load your clients. Check your connection and reload.</p></>;
-  if (!clients) return <>{topbar}<p>Loading…</p></>;
-
-  if (route.name === 'clients') {
-    return (
+  let body;
+  if (clientsError) body = <p>Couldn't load your clients. Check your connection and reload.</p>;
+  else if (!clients) body = <p>Loading…</p>;
+  else if (route.name === 'clients') {
+    body = (
       <>
-        {topbar}
+        <p class="status">{user.email}</p>
         {clients.length === 0 && (
           <p>You don't have access to any clients yet. Ask the admin to add your email ({user.email}).</p>
         )}
@@ -50,10 +67,17 @@ export function Shell({ repo, user, onSignOut }: Props) {
         ))}
       </>
     );
+  } else if (route.name === 'admin') {
+    body = admin ? <AdminScreen repo={repo} clients={clients} /> : <p>…</p>;
+  } else if (route.name === 'scripts') {
+    body = <ScriptList repo={repo} clientId={route.c} go={go} onError={onError} isAdmin={!!admin} />;
+  } else if (route.name === 'videos') {
+    body = <VideoList repo={repo} clientId={route.c} scriptId={route.s} go={go} onError={onError} />;
+  } else if (route.name === 'orphans') {
+    body = <OrphansView repo={repo} clientId={route.c} scriptId={route.s} onError={onError} />;
+  } else {
+    body = <ReaderRoute repo={repo} clientId={route.c} scriptId={route.s} videoId={route.v} onError={onError} onNotice={setNotice} />;
   }
-  if (route.name === 'admin') return admin ? <>{topbar}<AdminScreen repo={repo} clients={clients} /></> : <>{topbar}<p>…</p></>;
-  if (route.name === 'scripts') return <>{topbar}<ScriptList repo={repo} clientId={route.c} go={go} onError={onError} /></>;
-  if (route.name === 'videos') return <>{topbar}<VideoList repo={repo} clientId={route.c} scriptId={route.s} go={go} onError={onError} /></>;
-  if (route.name === 'reader') return <>{topbar}<ReaderRoute repo={repo} clientId={route.c} scriptId={route.s} videoId={route.v} onError={onError} /></>;
-  return <>{topbar}<p>…</p></>;
+
+  return <>{topbar}{body}{noticeBar}</>;
 }
