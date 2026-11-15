@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
 import type { Repo, RepoError, ScriptSummary } from '../data/types';
+import { AddScript } from './AddScript';
 
 interface Props {
   repo: Repo;
@@ -14,6 +15,7 @@ export function ScriptList({ repo, clientId, go, onError }: Props) {
   if (!scripts) return <p>Loading…</p>;
   return (
     <>
+      <AddScript repo={repo} clientId={clientId} />
       {scripts.length === 0 && <p>No scripts yet — tap + to add one.</p>}
       {scripts.map((s) => (
         <button class="list-item" key={s.id} onClick={() => go(`#/c/${clientId}/s/${s.id}`)}>
