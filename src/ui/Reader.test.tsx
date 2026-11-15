@@ -52,7 +52,7 @@ describe('Reader', () => {
     fireEvent.click(second.querySelectorAll('.w')[1]);
     fireEvent.click(second.querySelector('.edit-btn')!);
     expect(done).toHaveBeenCalledWith('s2');
-    expect(loc).toHaveBeenCalledWith('s2');
+    expect(loc).toHaveBeenCalledWith('s2', expect.objectContaining({ left: expect.any(Number), top: expect.any(Number) }));
     expect(word).toHaveBeenCalledWith('s2', 1);
     expect(edit).toHaveBeenCalledWith('s2');
   });

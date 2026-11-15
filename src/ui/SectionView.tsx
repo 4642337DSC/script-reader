@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks';
 import type { Section } from '../model/types';
 import { wordsOf } from '../model/wordMoves';
+import type { Rect } from './placePopover';
 
 /** Everything the words of a paragraph need from the screen that owns the selection. */
 export interface WordCtl {
@@ -20,7 +21,7 @@ interface Props {
   /** The coloured bar on the left: one tap toggles done. */
   onToggleDone: (id: string) => void;
   /** The location label above the text: opens the location box. */
-  onOpenLocation: (id: string) => void;
+  onOpenLocation: (id: string, anchor: Rect) => void;
   onAcceptSuggestion?: (id: string) => void;
   onDismissSuggestion?: (id: string) => void;
 }
@@ -59,7 +60,10 @@ export function SectionView({ section, ctl, over, onToggleDone, onOpenLocation, 
       >{section.done ? '✓' : ''}</button>
       <div class="section-body">
         <div class="section-top">
-          <button class={`loc loc-btn${section.location ? '' : ' empty'}`} onClick={() => onOpenLocation(section.id)}>
+          <button class={`loc loc-btn${section.location ? '' : ' empty'}`} onClick={(e) => {
+            const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+            onOpenLocation(section.id, { left: r.left, top: r.top, width: r.width, height: r.height });
+          }}>
             {section.location ? `📍 ${section.location}` : '+ location'}
           </button>
           {!editing && <button class="edit-btn" aria-label="Edit text" onClick={() => ctl.onStartEdit(section.id)}>✎</button>}

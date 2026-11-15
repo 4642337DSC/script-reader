@@ -92,3 +92,11 @@ html, body { margin: 0; background: #101114; color: #e8e8ea; font-family: system
 .inline-msg { color: #ffb4b4; margin: .3rem 0 .6rem; }
 .undo-btn { min-width: 44px; min-height: 44px; margin-left: .25rem; background: #22252b; color: inherit; border: 0; border-radius: 8px; font-size: 1.1rem; }
 .undo-btn:disabled { opacity: .35; }
+
+/* location popup next to the tapped label */
+.loc-backdrop { position: fixed; inset: 0; z-index: 20; background: transparent; }
+.loc-pop { position: fixed; z-index: 21; width: min(320px, calc(100vw - 16px)); background: #1b1d22; border: 1px solid #3a3f48; border-radius: 12px; padding: .6rem; box-shadow: 0 8px 24px rgba(0, 0, 0, .55); }
+.loc-pop .pop-row { display: flex; gap: .4rem; align-items: center; }
+.loc-pop .pop-row input { flex: 1; min-width: 0; }
+.loc-pop .pop-small { margin-top: .4rem; justify-content: flex-end; }
+.loc-pop .chips { margin: .5rem 0 0; }

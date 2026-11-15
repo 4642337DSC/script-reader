@@ -1,35 +1,61 @@
-import { useState } from 'preact/hooks';
+import { useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { suggest } from '../model/recentLocations';
+import { placePopover, type Rect } from './placePopover';
 
 interface Props {
   recents: string[];
   current: string | null;
+  /** Where the label that was tapped is on screen; the popup opens right next to it. */
+  anchor?: Rect;
   onPick: (loc: string | null) => void;
   onClose: () => void;
 }
 
-export function LocationSheet({ recents, current, onPick, onClose }: Props) {
+const viewport = () => ({ width: window.innerWidth, height: window.innerHeight });
+const DEFAULT_ANCHOR: Rect = { left: 16, top: 16, width: 0, height: 0 };
+
+/** A small popup beside the tapped location label: Save sits next to the text box, recent places are one tap. */
+export function LocationSheet({ recents, current, anchor = DEFAULT_ANCHOR, onPick, onClose }: Props) {
   const [text, setText] = useState(current ?? '');
   const chips = suggest(recents, text);
+  const ref = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState(() => placePopover(anchor, { width: 0, height: 0 }, viewport()));
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (el) setPos(placePopover(anchor, { width: el.offsetWidth, height: el.offsetHeight }, viewport()));
+  }, [anchor.left, anchor.top, anchor.width, anchor.height, chips.length]);
+
   return (
-    <div class="sheet">
-      <input
-        placeholder="Location"
-        value={text}
-        autoFocus
-        onInput={(e) => setText((e.target as HTMLInputElement).value)}
-        onKeyDown={(e) => { if (e.key === 'Enter' && text.trim()) onPick(text.trim()); }}
-      />
-      <div class="chips">
-        {chips.map((c) => (
-          <button class="chip" key={c} onClick={() => onPick(c)}>{c}</button>
-        ))}
+    <>
+      <div class="loc-backdrop" onClick={onClose} />
+      <div
+        class="loc-pop"
+        ref={ref}
+        style={{ left: `${pos.left}px`, top: `${pos.top}px` }}
+        onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
+      >
+        <div class="pop-row">
+          <input
+            placeholder="Location"
+            value={text}
+            autoFocus
+            onInput={(e) => setText((e.target as HTMLInputElement).value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && text.trim()) onPick(text.trim()); }}
+          />
+          <button class="chip" disabled={!text.trim()} onClick={() => onPick(text.trim())}>Save</button>
+        </div>
+        {chips.length > 0 && (
+          <div class="chips">
+            {chips.map((c) => (
+              <button class="chip" key={c} onClick={() => onPick(c)}>{c}</button>
+            ))}
+          </div>
+        )}
+        <div class="pop-row pop-small">
+          <button class="chip" onClick={() => onPick(null)}>Clear</button>
+          <button class="chip" onClick={onClose}>Cancel</button>
+        </div>
       </div>
-      <div class="chips">
-        <button class="chip" disabled={!text.trim()} onClick={() => onPick(text.trim())}>Save</button>
-        <button class="chip" onClick={() => onPick(null)}>Clear</button>
-        <button class="chip" onClick={onClose}>Cancel</button>
-      </div>
-    </div>
+    </>
   );
 }

@@ -1,6 +1,7 @@
 import type { ComponentChildren } from 'preact';
 import type { Video } from '../model/types';
 import { SectionView, type WordCtl } from './SectionView';
+import type { Rect } from './placePopover';
 
 export const MIN_SCALE = 0.75;
 export const MAX_SCALE = 3;
@@ -16,7 +17,7 @@ interface Props {
   canUndo?: boolean;
   onUndo?: () => void;
   onToggleDone: (id: string) => void;
-  onOpenLocation: (id: string) => void;
+  onOpenLocation: (id: string, anchor: Rect) => void;
   onJoin: (sectionId: string) => void;
   onFontScale: (scale: number) => void;
   onEditTitle?: () => void;

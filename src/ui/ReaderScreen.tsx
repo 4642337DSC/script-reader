@@ -10,6 +10,7 @@ import { LocationSheet } from './LocationSheet';
 import { EditText } from './EditText';
 import { NotesPanel } from './NotesPanel';
 import type { WordCtl } from './SectionView';
+import type { Rect } from './placePopover';
 
 interface Props {
   video: Video;
@@ -24,7 +25,7 @@ interface Props {
 
 interface Sel { sectionId: string; start: number; end: number; anchor: number; phase: 'anchored' | 'range' }
 type Zone = { type: 'gap'; index: number } | { type: 'sec'; id: string };
-type Mode = { kind: 'none' } | { kind: 'title' } | { kind: 'location'; id: string };
+type Mode = { kind: 'none' } | { kind: 'title' } | { kind: 'location'; id: string; anchor: Rect };
 
 const DOUBLE_TAP_MS = 350;
 const HOLD_MS = 350;
@@ -222,7 +223,7 @@ export function ReaderScreen({
         onUndo={undo}
         onFontScale={onFontScale}
         onToggleDone={(id) => commit(toggleDone(video, id, now()))}
-        onOpenLocation={(id) => setMode({ kind: 'location', id })}
+        onOpenLocation={(id, anchor) => setMode({ kind: 'location', id, anchor })}
         onJoin={(id) => commit(mergeWithPrevious(video, id, now()))}
         onEditTitle={() => setMode({ kind: 'title' })}
         onAcceptSuggestion={(id) => {
@@ -244,6 +245,7 @@ export function ReaderScreen({
         <LocationSheet
           recents={recents}
           current={locSection.location}
+          anchor={mode.kind === 'location' ? mode.anchor : undefined}
           onPick={(loc) => {
             commit(setLocation(video, locSection.id, loc, now()), loc ? recordLocation(recents, loc) : recents);
             setMode({ kind: 'none' });
