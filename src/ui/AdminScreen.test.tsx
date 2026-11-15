@@ -44,12 +44,15 @@ describe('admin screen', () => {
     const w = world();
     const r = render(<App auth={auth(boss)} makeRepo={w.makeRepo} />);
     fireEvent.click(await r.findByText('Admin'));
-    fireEvent.input(await r.findByPlaceholderText('New client name'), { target: { value: 'Gamma' } });
-    fireEvent.click(r.getByText('Add client'));
+    const nameBox = await r.findByPlaceholderText('New client name');
+    expect(r.queryByText('Add client')).toBeNull();
+    fireEvent.input(nameBox, { target: { value: 'Gamma' } });
+    fireEvent.keyDown(nameBox, { key: 'Enter' });
     await r.findByText('Gamma');
     expect(w.clientsOf()).toEqual([]);
+    expect(r.queryByText('Add member')).toBeNull();
     fireEvent.input(r.getByLabelText('Add member to Gamma'), { target: { value: 'Anna@X.com' } });
-    fireEvent.click(r.getByText('Add member'));
+    fireEvent.pointerDown(document.body);
     await r.findByText('anna@x.com');
     expect(w.clientsOf()).toEqual(['Gamma']);
     fireEvent.click(r.getByLabelText('Remove anna@x.com'));
@@ -62,7 +65,7 @@ describe('admin screen', () => {
     const r = render(<App auth={auth(boss)} makeRepo={w.makeRepo} />);
     fireEvent.click(await r.findByText('Admin'));
     fireEvent.input(await r.findByLabelText('Add member to Gamma'), { target: { value: 'not-an-email' } });
-    fireEvent.click(r.getByText('Add member'));
+    fireEvent.keyDown(r.getByLabelText('Add member to Gamma'), { key: 'Enter' });
     expect(await r.findByText('Enter a valid email address.')).toBeTruthy();
   });
 
@@ -85,8 +88,12 @@ describe('admin screen', () => {
     await w.bossRepo.createClient('Gamma');
     const r = render(<App auth={auth(boss)} makeRepo={w.makeRepo} />);
     fireEvent.click(await r.findByText('Admin'));
-    vi.spyOn(window, 'prompt').mockReturnValue('Delta');
     fireEvent.click(await r.findByLabelText('Rename Gamma'));
+    const box = r.getByLabelText('Client name') as HTMLInputElement;
+    expect(box.value).toBe('Gamma');
+    fireEvent.input(box, { target: { value: 'Delta' } });
+    fireEvent.keyDown(box, { key: 'Enter' });
     expect(await r.findByText('Delta')).toBeTruthy();
+    expect(r.queryByLabelText('Client name')).toBeNull();
   });
 });

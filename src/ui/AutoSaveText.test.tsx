@@ -85,6 +85,44 @@ describe('AutoSaveText: no Save button, leaving the box saves', () => {
     expect(b.onSave).toHaveBeenCalledWith('line one');
   });
 
+  test('an "add" box (keepOpen) saves, empties itself and is ready for the next entry', () => {
+    const r = open({ keepOpen: true, initial: '', multiline: false });
+    r.type('first');
+    fireEvent.pointerDown(r.getByTestId('elsewhere'));
+    expect(r.onSave).toHaveBeenLastCalledWith('first');
+    expect(r.box.value).toBe('');
+    r.type('second');
+    fireEvent.keyDown(r.box, { key: 'Enter' });
+    expect(r.onSave).toHaveBeenLastCalledWith('second');
+    expect(r.onSave).toHaveBeenCalledTimes(2);
+  });
+
+  test('an "add" box keeps the text when the entry is refused, so it can be corrected', () => {
+    const onSave = vi.fn().mockReturnValueOnce(false).mockReturnValue(true);
+    const r = open({ keepOpen: true, initial: '', multiline: false, onSave });
+    r.type('not valid');
+    fireEvent.pointerDown(r.getByTestId('elsewhere'));
+    expect(r.box.value).toBe('not valid');
+    r.type('valid@x.com');
+    fireEvent.keyDown(r.box, { key: 'Enter' });
+    expect(onSave).toHaveBeenLastCalledWith('valid@x.com');
+    expect(r.box.value).toBe('');
+  });
+
+  test('an "add" box does not grab the keyboard on its own when autoFocus is off', () => {
+    const r = open({ keepOpen: true, initial: '', autoFocus: false, placeholder: 'New thing' });
+    expect(document.activeElement).not.toBe(r.box);
+    expect(r.getByPlaceholderText('New thing')).toBe(r.box);
+  });
+
+  test('Escape in an "add" box empties it without saving', () => {
+    const r = open({ keepOpen: true, initial: '' });
+    r.type('draft');
+    fireEvent.keyDown(r.box, { key: 'Escape' });
+    expect(r.box.value).toBe('');
+    expect(r.onSave).not.toHaveBeenCalled();
+  });
+
   test('a single-line box is an input, a multi-line one is a textarea', () => {
     expect(open({ multiline: false }).box.tagName).toBe('INPUT');
     cleanup();

@@ -1,12 +1,12 @@
 import { useState } from 'preact/hooks';
 import type { Client, Repo } from '../data/types';
+import { AutoSaveText } from './AutoSaveText';
 
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 export function AdminScreen({ repo, clients }: { repo: Repo; clients: Client[] }) {
-  const [name, setName] = useState('');
   const [error, setError] = useState('');
-  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [renamingId, setRenamingId] = useState<string | null>(null);
 
   const run = async (fn: () => Promise<unknown>) => {
     setError('');
@@ -18,18 +18,34 @@ export function AdminScreen({ repo, clients }: { repo: Repo; clients: Client[] }
       <h2>Clients and access</h2>
       {error && <p class="status">{error}</p>}
       <div class="topbar">
-        <input class="inline-input" placeholder="New client name" value={name} onInput={(e) => setName((e.target as HTMLInputElement).value)} />
-        <button disabled={!name.trim()} onClick={() => run(async () => { await repo.createClient(name.trim()); setName(''); })}>Add client</button>
+        <AutoSaveText
+          keepOpen
+          multiline={false}
+          autoFocus={false}
+          class="inline-input"
+          initial=""
+          label="New client name"
+          placeholder="New client name"
+          onSave={(t) => { void run(() => repo.createClient(t.trim())); }}
+        />
       </div>
       {clients.map((c) => (
         <section class="client-card" key={c.id}>
           <div class="topbar">
-            <h3>{c.name}</h3>
+            {renamingId === c.id ? (
+              <AutoSaveText
+                multiline={false}
+                class="inline-input"
+                initial={c.name}
+                label="Client name"
+                onSave={(t) => { setRenamingId(null); void run(() => repo.renameClient(c.id, t.trim())); }}
+                onCancel={() => setRenamingId(null)}
+              />
+            ) : (
+              <h3>{c.name}</h3>
+            )}
             <span>
-              <button aria-label={`Rename ${c.name}`} onClick={() => {
-                const n = window.prompt('New name', c.name)?.trim();
-                if (n) void run(() => repo.renameClient(c.id, n));
-              }}>Rename</button>
+              <button aria-label={`Rename ${c.name}`} onClick={() => setRenamingId(c.id)}>Rename</button>
               <button aria-label={`Delete ${c.name}`} onClick={() => {
                 if (window.confirm(`Delete ${c.name} and all its scripts for everyone?`)) void run(() => repo.deleteClient(c.id));
               }}>Delete</button>
@@ -43,18 +59,21 @@ export function AdminScreen({ repo, clients }: { repo: Repo; clients: Client[] }
             </div>
           ))}
           <div class="topbar">
-            <input
+            <AutoSaveText
+              keepOpen
+              multiline={false}
+              autoFocus={false}
               class="inline-input"
-              aria-label={`Add member to ${c.name}`}
+              initial=""
+              label={`Add member to ${c.name}`}
               placeholder="Member email"
-              value={drafts[c.id] ?? ''}
-              onInput={(e) => setDrafts({ ...drafts, [c.id]: (e.target as HTMLInputElement).value })}
+              onSave={(t) => {
+                const email = t.trim().toLowerCase();
+                if (!EMAIL.test(email)) { setError('Enter a valid email address.'); return false; }
+                void run(() => repo.setMembers(c.id, [...c.members, email]));
+                return true;
+              }}
             />
-            <button onClick={() => {
-              const email = (drafts[c.id] ?? '').trim().toLowerCase();
-              if (!EMAIL.test(email)) { setError('Enter a valid email address.'); return; }
-              void run(async () => { await repo.setMembers(c.id, [...c.members, email]); setDrafts({ ...drafts, [c.id]: '' }); });
-            }}>Add member</button>
           </div>
         </section>
       ))}

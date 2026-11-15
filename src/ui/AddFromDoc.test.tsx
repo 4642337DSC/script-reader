@@ -41,7 +41,7 @@ describe('import from a Google Docs link', () => {
     const getDriveToken = vi.fn().mockResolvedValue('tok');
     const r = await setup(getDriveToken);
     fireEvent.input(await openLinkBox(r), { target: { value: LINK } });
-    fireEvent.click(r.getByText('Import'));
+    fireEvent.keyDown(r.getByPlaceholderText('Paste Google Docs link'), { key: 'Enter' });
     expect(await r.findByText('Added Batch from Docs')).toBeTruthy();
     expect(await r.findByText('Batch from Docs')).toBeTruthy();
     expect(getDriveToken).toHaveBeenCalledTimes(1);
@@ -52,7 +52,7 @@ describe('import from a Google Docs link', () => {
     const getDriveToken = vi.fn().mockResolvedValue('tok');
     const r = await setup(getDriveToken);
     fireEvent.input(await openLinkBox(r), { target: { value: 'https://example.com/x' } });
-    fireEvent.click(r.getByText('Import'));
+    fireEvent.keyDown(r.getByPlaceholderText('Paste Google Docs link'), { key: 'Enter' });
     expect(await r.findByText("That doesn't look like a Google Docs link.")).toBeTruthy();
     expect(getDriveToken).not.toHaveBeenCalled();
   });
@@ -61,7 +61,7 @@ describe('import from a Google Docs link', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{}', { status: 403 })));
     const r = await setup(async () => 'tok');
     fireEvent.input(await openLinkBox(r), { target: { value: LINK } });
-    fireEvent.click(r.getByText('Import'));
+    fireEvent.keyDown(r.getByPlaceholderText('Paste Google Docs link'), { key: 'Enter' });
     expect(await r.findByText("Your Google account can't open that document. Ask the owner to share it with you.")).toBeTruthy();
     expect(r.getByText(/No scripts yet/)).toBeTruthy();
   });
@@ -69,7 +69,7 @@ describe('import from a Google Docs link', () => {
   test('declining the Google permission shows a message and imports nothing', async () => {
     const r = await setup(async () => { throw new Error('popup closed'); });
     fireEvent.input(await openLinkBox(r), { target: { value: LINK } });
-    fireEvent.click(r.getByText('Import'));
+    fireEvent.keyDown(r.getByPlaceholderText('Paste Google Docs link'), { key: 'Enter' });
     expect(await r.findByText("Google permission wasn't granted, so nothing was imported.")).toBeTruthy();
   });
 
@@ -84,12 +84,12 @@ describe('import from a Google Docs link', () => {
     vi.stubGlobal('fetch', fetchMock);
     const r = await setup(async () => 'tok');
     fireEvent.input(await openLinkBox(r), { target: { value: LINK } });
-    fireEvent.click(r.getByText('Import'));
+    fireEvent.keyDown(r.getByPlaceholderText('Paste Google Docs link'), { key: 'Enter' });
     await r.findByText('Added Same');
     fireEvent.click(r.getByLabelText('Add script'));
     fireEvent.click(r.getByText('From Google Docs link'));
     fireEvent.input(await r.findByPlaceholderText('Paste Google Docs link'), { target: { value: LINK } });
-    fireEvent.click(r.getByText('Import'));
+    fireEvent.keyDown(r.getByPlaceholderText('Paste Google Docs link'), { key: 'Enter' });
     expect(await r.findByText(/Updated Same/)).toBeTruthy();
   });
 

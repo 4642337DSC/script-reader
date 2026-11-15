@@ -2,6 +2,7 @@ import { useRef, useState } from 'preact/hooks';
 import { readFileBytes } from '../docx/readFile';
 import { fetchGoogleDoc, GDocError, parseDocLink } from '../gdocs/gdocs';
 import { AiUnavailable, type Classifier } from '../ai/classify';
+import { AutoSaveText } from './AutoSaveText';
 import { basicImport, smartImport } from '../import/smartImport';
 import type { Repo } from '../data/types';
 
@@ -22,8 +23,6 @@ export function AddScript({ repo, clientId, getDriveToken, classify }: Props) {
   const [notes, setNotes] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
   const [linkMode, setLinkMode] = useState(false);
-  const [link, setLink] = useState('');
-  const [busy, setBusy] = useState(false);
   const [unavailable, setUnavailable] = useState<{ name: string; bytes: ArrayBuffer; reason: string } | null>(null);
   const [aiSeen, setAiSeen] = useState(() => localStorage.getItem('aiNoticeSeen') === '1');
 
@@ -92,14 +91,15 @@ export function AddScript({ repo, clientId, getDriveToken, classify }: Props) {
     });
   };
 
-  const importLink = async () => {
-    const id = parseDocLink(link);
-    if (!id) { setStatus("That doesn't look like a Google Docs link."); return; }
-    await exclusive(() => importLinkNow(id));
+  /** Called when the link box is left or Enter is pressed. Returns false when the text is not a Docs link, so it stays to be fixed. */
+  const importLink = (text: string): boolean => {
+    const id = parseDocLink(text);
+    if (!id) { setStatus("That doesn't look like a Google Docs link."); return false; }
+    void exclusive(() => importLinkNow(id));
+    return true;
   };
 
   const importLinkNow = async (id: string) => {
-    setBusy(true);
     try {
       let token: string;
       try {
@@ -112,7 +112,6 @@ export function AddScript({ repo, clientId, getDriveToken, classify }: Props) {
       await importBytes(doc.name, doc.bytes);
       setOpen(false);
       setLinkMode(false);
-      setLink('');
     } catch (e) {
       const code = e instanceof GDocError ? e.code : 'other';
       setStatus(
@@ -121,8 +120,6 @@ export function AddScript({ repo, clientId, getDriveToken, classify }: Props) {
         : "Couldn't import that document. Check your connection and try again.",
       );
       setNotes([]);
-    } finally {
-      setBusy(false);
     }
   };
 
@@ -183,14 +180,16 @@ export function AddScript({ repo, clientId, getDriveToken, classify }: Props) {
       )}
       {open && linkMode && (
         <div class="topbar">
-          <input
+          <AutoSaveText
+            keepOpen
+            multiline={false}
             class="inline-input"
+            initial=""
+            label="Google Docs link"
             placeholder="Paste Google Docs link"
-            value={link}
-            onInput={(e) => setLink((e.target as HTMLInputElement).value)}
+            onSave={importLink}
+            onCancel={() => { setLinkMode(false); setOpen(false); }}
           />
-          <button disabled={busy || !link.trim()} onClick={() => void importLink()}>Import</button>
-          <button onClick={() => { setLinkMode(false); setOpen(false); }}>Cancel</button>
         </div>
       )}
       {dialog}
