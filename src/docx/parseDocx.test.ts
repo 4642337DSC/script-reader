@@ -58,3 +58,12 @@ describe('parseDocx (review fixes)', () => {
     expect(r[0].paragraphs).toEqual(['word next']);
   });
 });
+
+describe('parseDocx (sample file)', () => {
+  test('samples/Test script.docx parses into two titled videos', async () => {
+    const { readFileSync } = await import('node:fs');
+    const buf = readFileSync('samples/Test script.docx');
+    const r = await parseDocx(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer);
+    expect(r.map((v) => [v.title.slice(0, 7), v.paragraphs.length])).toEqual([['Video 1', 5], ['Video 2', 4]]);
+  });
+});

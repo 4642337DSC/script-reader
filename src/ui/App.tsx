@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'preact/hooks';
 import type { ScriptDoc, Video } from '../model/types';
 import type { Store } from '../storage/db';
 import { ReaderScreen } from './ReaderScreen';
+import { importLocalFile, readFileBytes } from '../model/importLocal';
 
 interface Props {
   store: Store;
@@ -39,6 +40,20 @@ export function App({ store, sync }: Props) {
   }, [store]);
   useEffect(() => { void refresh(); }, [refresh]);
 
+  const addFile = async (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    try {
+      await importLocalFile(store, file.name, await readFileBytes(file), Date.now());
+      setStatus(`Added ${file.name}`);
+    } catch {
+      setStatus(`Couldn't read ${file.name}`);
+    }
+    await refresh();
+  };
+
   const runSync = async (interactive = false) => {
     if (!sync) return;
     setStatus('Syncing…');
@@ -60,6 +75,10 @@ export function App({ store, sync }: Props) {
     <div class="topbar">
       {back !== undefined ? <button onClick={() => go(back)}>← Back</button> : <strong>Script Reader</strong>}
       <span class="status">{status}</span>
+      <label class="add-btn" aria-label="Add script file">
+        +
+        <input type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden onChange={addFile} />
+      </label>
       {sync && <button onClick={() => void runSync(true)}>Sync</button>}
     </div>
   );

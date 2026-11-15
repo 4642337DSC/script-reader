@@ -26,3 +26,5 @@ html, body { margin: 0; background: #101114; color: #e8e8ea; font-family: system
 .topbar { display: flex; justify-content: space-between; align-items: center; padding: .75rem 0; gap: .5rem; }
 .topbar button { min-height: 44px; background: #22252b; color: inherit; border: 0; border-radius: 8px; padding: 0 .9rem; }
 .status { font-size: .8rem; color: #8a8f99; }
+
+.add-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; background: #22252b; border-radius: 8px; font-size: 1.5rem; cursor: pointer; }

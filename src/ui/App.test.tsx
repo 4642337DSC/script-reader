@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/preact';
 import { App } from './App';
 import { openStore } from '../storage/db';
+import { makeDocx } from '../testing/makeDocx';
 import type { ScriptDoc } from '../model/types';
 
 const seed: ScriptDoc = {
@@ -48,5 +49,48 @@ describe('App', () => {
   test('empty store shows a hint instead of a blank screen', async () => {
     const { findByText } = render(<App store={await openStore()} />);
     expect(await findByText(/No scripts yet/i)).toBeTruthy();
+  });
+});
+
+describe('App: manual add (+)', () => {
+  const pick = (container: Element, file: File) =>
+    fireEvent.change(container.querySelector('input[type=file]')!, { target: { files: [file] } });
+  const docxFile = async (name: string, ...paras: string[]) =>
+    new File([await makeDocx([{ text: 'Manual title', style: 'Heading1' }, ...paras.map((text) => ({ text }))])], name);
+
+  test('+ adds a .docx from the device as a script', async () => {
+    const store = await openStore();
+    const { container, findByText, getByLabelText } = render(<App store={store} />);
+    await findByText(/No scripts yet/i);
+    expect(getByLabelText('Add script file')).toBeTruthy();
+    pick(container, await docxFile('Local batch.docx', 'one', 'two'));
+    expect(await findByText('Local batch.docx')).toBeTruthy();
+    expect((await store.getScripts())[0].videos[0].sections.map((s) => s.text)).toEqual(['one', 'two']);
+  });
+
+  test('an unreadable file shows an error and adds nothing', async () => {
+    const store = await openStore();
+    const { container, findByText } = render(<App store={store} />);
+    await findByText(/No scripts yet/i);
+    pick(container, new File(['not a docx'], 'bad.docx'));
+    expect(await findByText(/Couldn.t read bad\.docx/)).toBeTruthy();
+    expect(await store.getScripts()).toEqual([]);
+  });
+
+  test('adding the same file name again keeps locations and done flags', async () => {
+    const store = await openStore();
+    const { container, findByText } = render(<App store={store} />);
+    await findByText(/No scripts yet/i);
+    pick(container, await docxFile('Same.docx', 'one', 'two'));
+    await findByText('Same.docx');
+    const d = (await store.getScripts())[0];
+    d.videos[0].sections[0].done = true;
+    await store.putScript(d);
+    pick(container, await docxFile('Same.docx', 'one', 'two changed'));
+    await waitFor(async () => {
+      const all = await store.getScripts();
+      expect(all).toHaveLength(1);
+      expect(all[0].videos[0].sections.map((s) => [s.text, s.done])).toEqual([['one', true], ['two changed', false]]);
+    });
   });
 });
