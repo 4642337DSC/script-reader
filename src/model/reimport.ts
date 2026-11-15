@@ -1,4 +1,4 @@
-import { buildVideosFromImport, normalizeImport, stripOuterQuotes } from '../import/importModel';
+import { buildVideosFromImport, normalizeImport, splitSentences, stripOuterQuotes } from '../import/importModel';
 import type { ImportedParagraph, ImportedVideo, ParsedVideo, ScriptDoc, Section, Video } from './types';
 
 export const norm = (s: string) =>
@@ -107,6 +107,22 @@ export function reimport(old: ScriptDoc, input: ImportedVideo[] | ParsedVideo[],
     p.paragraphs.forEach((para) => {
       const members = findMatch(match.sections, units, usedUnit, para);
       if (!members) { sections.push(...buildVideosFromImport([{ ...p, paragraphs: [para] }], now)[0].sections); return; }
+      // an untouched one-piece card (text still equals the imported paragraph) is split into sentences too
+      if (members.length === 1) {
+        const only = match.sections[members[0]];
+        const pieces = norm(only.text) === norm(para.text) ? splitSentences(only.text) : [];
+        if (pieces.length > 1) {
+          pieces.forEach((t, n) => sections.push({
+            ...only,
+            id: n === 0 ? only.id : crypto.randomUUID(),
+            text: t,
+            updatedAt: n === 0 ? only.updatedAt : now,
+            originalText: only.originalText ?? para.source,
+            suggestedLocation: only.suggestedLocation ?? (only.location ? null : para.suggestedLocation ?? null),
+          }));
+          return;
+        }
+      }
       for (const k of members) {
         const s = match.sections[k];
         sections.push({

@@ -83,3 +83,22 @@ describe('reimport (review fixes)', () => {
     expect(reimport(d, [{ title: 'T', paragraphs: ['one'] }], 999).updatedAt).toBe(1);
   });
 });
+
+describe('reimport splits old one-piece cards into sentences', () => {
+  test('an untouched paragraph card becomes sentence cards that keep its location; edited cards stay', () => {
+    const para = (t: string) => ({ source: t, text: t });
+    const old = reimport({ videos: [], orphans: [] } as never, [{ title: 'T', group: null, notes: '', paragraphs: [para('Unu doi. Trei patru.'), para('Cinci șase. Șapte opt.')] }], 1);
+    // simulate an old script: one card per paragraph, with a location on the first and an edit on the second
+    const v = old.videos[0];
+    const oldDoc = { ...old, videos: [{ ...v, sections: [
+      { id: 'a', text: 'Unu doi. Trei patru.', originalText: 'Unu doi. Trei patru.', location: 'Kitchen', done: true, updatedAt: 1 },
+      { id: 'b', text: 'Cinci șase editat.', originalText: 'Cinci șase. Șapte opt.', location: null, done: false, updatedAt: 1 },
+    ] }] };
+    const out = reimport(oldDoc as never, [{ title: 'T', group: null, notes: '', paragraphs: [para('Unu doi. Trei patru.'), para('Cinci șase. Șapte opt.')] }], 2);
+    const s = out.videos[0].sections;
+    expect(s.map((x) => x.text)).toEqual(['Unu doi.', 'Trei patru.', 'Cinci șase editat.']);
+    expect(s[0].id).toBe('a');
+    expect(s[1].location).toBe('Kitchen');
+    expect(s[1].done).toBe(true);
+  });
+});
