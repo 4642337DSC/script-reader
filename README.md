@@ -1,40 +1,52 @@
 # Script Reader
 
-Personal PWA for reading short-form video scripts (.docx) on Android/web, assigning a location to each
-section, splitting sections, and ticking them off. Works offline; syncs through Google Drive.
+A team PWA for reading short-form video scripts (.docx) on Android or the web. Scripts are grouped by
+**client**; an admin decides which team members can open which clients. Everyone with access sees the same
+scripts and the same locations/checkmarks, live. It works offline and syncs when signal returns.
 
-## How it works
-- Put `.docx` scripts in a Drive folder named **Scripts** (My Drive root or anywhere your account can see it).
-  Each file = titles + spoken text. A title is a Word *Heading*/*Title* style paragraph, or (if the file has
-  no headings) a short all-bold line.
-- Open the app, tap **Sync**. Scripts are downloaded to the device; locations, splits and checkmarks are stored
-  on the device and synced to a hidden app-data file in your Drive.
-- Re-sending an edited .docx keeps state on unchanged paragraphs; paragraphs that disappeared are listed
-  under "no longer in script".
+## Using it
+- **Sign in** with a Google account. You see only the clients the admin gave you. If you see "ask the admin",
+  send the admin the email shown on screen.
+- **Inside a client**, tap **+** to add a script from a .docx (titles = Word Heading/Title styles, or short bold
+  lines if the file has no headings; everything else is spoken text). Adding a file with the same name updates
+  that script and keeps locations and ticks on unchanged text. Removed paragraphs go to "no longer in script".
+- **Open a video**: tap a paragraph to set its location, mark it done, split it (tap the word where the new
+  section starts) or merge it with the previous one. Text reflows at any size (A− / A+).
+- **Admin** (one person): the *Admin* button lists all clients; create/rename/delete clients and add or remove
+  members by Google email. Admins can also delete scripts.
 
 ## Develop
 ```
 npm install
-npm test          # unit tests
-npm run dev       # local dev server
-npm run build     # production build in dist/
+npm test               # unit/UI tests (fast, no Firebase needed)
+npm run test:emulator  # security-rule and Firestore tests (needs Java 21+ and downloads the Firestore emulator)
+npm run dev            # local dev server (needs the Firebase variables below in .env.local)
+npm run build
 ```
 
-## One-time Google setup (needed for Sync)
-1. Go to https://console.cloud.google.com, create a project (e.g. "Script Reader").
-2. APIs & Services → Library → enable **Google Drive API**.
-3. APIs & Services → OAuth consent screen → External. App name "Script Reader", your email. Add scopes
-   `https://www.googleapis.com/auth/drive.readonly` and `https://www.googleapis.com/auth/drive.appdata` (paste the full addresses; "Manually add scopes" rejects abbreviations). Then **Publish app → In production**
-   (otherwise sign-in expires every 7 days; you will see a one-time "unverified app" warning — continue).
-4. Credentials → Create credentials → OAuth client ID → *Web application*. Authorized JavaScript origins:
-   `http://localhost:5173` and your deployed URL (e.g. `https://<you>.github.io`).
-5. Put the client ID in `.env.local`: `VITE_GOOGLE_CLIENT_ID=xxxx.apps.googleusercontent.com`
-   (and, for GitHub Pages, as a repository *variable* named `VITE_GOOGLE_CLIENT_ID`).
+## Firebase setup (one time, done by the admin)
+1. https://console.firebase.google.com → **Add project** (e.g. "script-reader"). Analytics is not needed.
+2. **Build → Authentication → Get started → Sign-in method → Google → Enable** (choose a support email).
+   Then **Settings → Authorized domains → Add domain**: `4642337dsc.github.io` (add `localhost` for local work).
+3. **Build → Firestore Database → Create database** → *Production mode*, any region near you.
+4. **Firestore → Rules** tab: replace the contents with the file [`firestore.rules`](firestore.rules) from this
+   repo and **Publish**.
+5. **Firestore → Data → Start collection**: collection ID `config`, document ID `admin`, one field
+   `email` (string) = the admin's Google email **in lowercase**. This marks who the admin is. Nobody can
+   change it from the app.
+6. **Project settings (gear) → General → Your apps → Add app → Web (</>)**: name it, no hosting. Copy the
+   `firebaseConfig` values.
+7. GitHub repo → **Settings → Secrets and variables → Actions → Variables** → add these four repository
+   *variables*: `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`,
+   `VITE_FIREBASE_APP_ID` (values from step 6). These are public identifiers by design; access is enforced by
+   the rules in step 4.
+8. Push to `main` (or re-run the **Deploy to GitHub Pages** workflow). For local work put the same four
+   variables in `.env.local`.
 
-## Deploy (GitHub Pages)
-Push to a GitHub repo's `main`; `.github/workflows/deploy.yml` tests, builds, and publishes.
-Enable Pages → Source: GitHub Actions.
+## Deploy
+Push to `main`; `.github/workflows/deploy.yml` tests, builds and publishes to GitHub Pages
+(repo **Settings → Pages → Source: GitHub Actions**).
 
 ## Install on Android
-Open the deployed URL in Chrome → menu → *Install app* / *Add to Home screen*. Open it once with signal,
-tap Sync, then it works in airplane mode.
+Open the site in Chrome → menu → *Install app*. Open it once with signal so it can download the app and your
+clients; after that it opens offline.
