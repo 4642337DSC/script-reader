@@ -24,7 +24,7 @@ npm run build     # production build in dist/
 1. Go to https://console.cloud.google.com, create a project (e.g. "Script Reader").
 2. APIs & Services → Library → enable **Google Drive API**.
 3. APIs & Services → OAuth consent screen → External. App name "Script Reader", your email. Add scopes
-   `.../auth/drive.readonly` and `.../auth/drive.appdata`. Then **Publish app → In production**
+   `https://www.googleapis.com/auth/drive.readonly` and `https://www.googleapis.com/auth/drive.appdata` (paste the full addresses; "Manually add scopes" rejects abbreviations). Then **Publish app → In production**
    (otherwise sign-in expires every 7 days; you will see a one-time "unverified app" warning — continue).
 4. Credentials → Create credentials → OAuth client ID → *Web application*. Authorized JavaScript origins:
    `http://localhost:5173` and your deployed URL (e.g. `https://<you>.github.io`).
