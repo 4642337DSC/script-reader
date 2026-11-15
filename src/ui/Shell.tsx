@@ -4,6 +4,7 @@ import { parseRoute, useHash } from './useHash';
 import { ScriptList } from './ScriptList';
 import { VideoList } from './VideoList';
 import { ReaderRoute } from './ReaderRoute';
+import { AdminScreen } from './AdminScreen';
 
 interface Props { repo: Repo; user: AuthUser; onSignOut: () => void }
 
@@ -13,7 +14,11 @@ export function Shell({ repo, user, onSignOut }: Props) {
   const [clients, setClients] = useState<Client[] | null>(null);
   const [clientsError, setClientsError] = useState<RepoError | null>(null);
 
+  const [admin, setAdmin] = useState<boolean | null>(null);
+
   useEffect(() => repo.watchClients(setClients, setClientsError), [repo]);
+  useEffect(() => { void repo.isAdmin().then(setAdmin); }, [repo]);
+  useEffect(() => { if (route.name === 'admin' && admin === false) go('#/'); }, [route.name, admin]);
 
   const backTo =
     route.name === 'scripts' || route.name === 'admin' ? '#/'
@@ -39,12 +44,14 @@ export function Shell({ repo, user, onSignOut }: Props) {
         {clients.length === 0 && (
           <p>You don't have access to any clients yet. Ask the admin to add your email ({user.email}).</p>
         )}
+        {admin && <button class="list-item" onClick={() => go('#/admin')}>Admin</button>}
         {clients.map((c) => (
           <button class="list-item" key={c.id} onClick={() => go(`#/c/${c.id}`)}>{c.name}</button>
         ))}
       </>
     );
   }
+  if (route.name === 'admin') return admin ? <>{topbar}<AdminScreen repo={repo} clients={clients} /></> : <>{topbar}<p>…</p></>;
   if (route.name === 'scripts') return <>{topbar}<ScriptList repo={repo} clientId={route.c} go={go} onError={onError} /></>;
   if (route.name === 'videos') return <>{topbar}<VideoList repo={repo} clientId={route.c} scriptId={route.s} go={go} onError={onError} /></>;
   if (route.name === 'reader') return <>{topbar}<ReaderRoute repo={repo} clientId={route.c} scriptId={route.s} videoId={route.v} onError={onError} /></>;
