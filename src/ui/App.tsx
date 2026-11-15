@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import type { AuthApi, AuthUser, Repo } from '../data/types';
+import type { Classifier } from '../ai/classify';
 import { Shell } from './Shell';
 import { SignIn } from './SignIn';
 
-interface Props { auth: AuthApi; makeRepo: (user: AuthUser) => Repo }
+interface Props { auth: AuthApi; makeRepo: (user: AuthUser) => Repo; classify?: Classifier }
 
-export function App({ auth, makeRepo }: Props) {
+export function App({ auth, makeRepo, classify }: Props) {
   const [user, setUser] = useState<AuthUser | null | undefined>(undefined); // undefined = still checking
   useEffect(() => auth.onUser(setUser), [auth]);
   const repo = useMemo(() => (user ? makeRepo(user) : null), [user?.email]);
@@ -18,6 +19,7 @@ export function App({ auth, makeRepo }: Props) {
       user={user}
       onSignOut={() => void auth.signOut()}
       getDriveToken={auth.getDriveToken ? () => auth.getDriveToken!() : undefined}
+      classify={classify}
     />
-  );;
+  );
 }

@@ -39,3 +39,9 @@ html, body { margin: 0; background: #101114; color: #e8e8ea; font-family: system
 .del-btn { min-height: 44px; background: #3a2226; color: #ffb4b4; border: 0; border-radius: 8px; padding: 0 .8rem; }
 
 .menu-item { display: flex; align-items: center; min-height: 44px; padding: 0 1rem; background: #2a2e36; border-radius: 10px; cursor: pointer; }
+
+.notice { display: flex; justify-content: space-between; align-items: center; gap: .6rem; background: #1f2a3a; border-radius: 10px; padding: .6rem 1rem; margin: .5rem 0; }
+.notice button { min-height: 44px; background: #2a3e5c; color: inherit; border: 0; border-radius: 8px; padding: 0 1rem; }
+.status-col { display: flex; flex-direction: column; gap: .15rem; }
+.toast { flex-wrap: wrap; gap: .5rem; }
+.toast button { min-height: 44px; background: #4a4f58; color: inherit; border: 0; border-radius: 8px; padding: 0 .9rem; }

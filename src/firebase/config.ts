@@ -1,4 +1,4 @@
-import { initializeApp } from 'firebase/app';
+import { initializeApp, type FirebaseApp } from 'firebase/app';
 import { getAuth, type Auth } from 'firebase/auth';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, type Firestore } from 'firebase/firestore';
 
@@ -18,10 +18,10 @@ export function isConfigured(): boolean {
   return !!(c.apiKey && c.authDomain && c.projectId && c.appId);
 }
 
-export function initFirebase(): { db: Firestore; auth: Auth } {
+export function initFirebase(): { app: FirebaseApp; db: Firestore; auth: Auth } {
   const app = initializeApp(readConfig());
   const db = initializeFirestore(app, {
     localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
   });
-  return { db, auth: getAuth(app) };
+  return { app, db, auth: getAuth(app) };
 }

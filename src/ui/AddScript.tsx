@@ -1,7 +1,8 @@
 import { useState } from 'preact/hooks';
-import { parseDocx } from '../docx/parseDocx';
 import { readFileBytes } from '../docx/readFile';
 import { fetchGoogleDoc, GDocError, parseDocLink } from '../gdocs/gdocs';
+import { AiUnavailable, type Classifier } from '../ai/classify';
+import { basicImport, smartImport } from '../import/smartImport';
 import type { Repo } from '../data/types';
 
 interface Props {
@@ -9,21 +10,58 @@ interface Props {
   clientId: string;
   /** When present, "+" offers "From Google Docs link" as well as the file picker. */
   getDriveToken?: () => Promise<string>;
+  /** When present, documents are read with Gemini; otherwise the basic rule-based reading is used. */
+  classify?: Classifier;
 }
 
 const FILE_ACCEPT = '.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+const AI_NOTICE = "Importing sends the document text to Google's Gemini service to read its structure.";
 
-export function AddScript({ repo, clientId, getDriveToken }: Props) {
+export function AddScript({ repo, clientId, getDriveToken, classify }: Props) {
   const [status, setStatus] = useState('');
+  const [notes, setNotes] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
   const [linkMode, setLinkMode] = useState(false);
   const [link, setLink] = useState('');
   const [busy, setBusy] = useState(false);
+  const [unavailable, setUnavailable] = useState<{ name: string; bytes: ArrayBuffer } | null>(null);
+  const [aiSeen, setAiSeen] = useState(() => localStorage.getItem('aiNoticeSeen') === '1');
+
+  const finish = (name: string, r: { reimported: boolean; orphanedCount: number }, notice?: string) => {
+    setStatus(r.reimported ? `Updated ${name} (kept your locations, ticks and edits)` : `Added ${name}`);
+    const n = r.orphanedCount;
+    setNotes([
+      ...(n > 0 ? [`${n} ${n === 1 ? 'paragraph' : 'paragraphs'} moved to "no longer in script"`] : []),
+      ...(notice ? [notice] : []),
+    ]);
+  };
 
   const importBytes = async (name: string, bytes: ArrayBuffer) => {
-    const parsed = await parseDocx(bytes);
-    const r = await repo.addScript(clientId, name, parsed);
-    setStatus(r.reimported ? `Updated ${name} (kept your locations and ticks)` : `Added ${name}`);
+    setUnavailable(null);
+    setNotes([]);
+    if (!classify) {
+      finish(name, await repo.addScript(clientId, name, await basicImport(bytes)));
+      return;
+    }
+    const exists = await repo.hasScript(clientId, name);
+    try {
+      const res = await smartImport(bytes, { classify, scriptExists: exists });
+      finish(name, await repo.addScript(clientId, name, res.videos), res.notice);
+    } catch (e) {
+      if (e instanceof AiUnavailable) { setUnavailable({ name, bytes }); return; }
+      throw e;
+    }
+  };
+
+  const importBasicAnyway = async () => {
+    if (!unavailable) return;
+    const { name, bytes } = unavailable;
+    setUnavailable(null);
+    try {
+      finish(name, await repo.addScript(clientId, name, await basicImport(bytes)));
+    } catch {
+      setStatus(`Couldn't read ${name}`);
+    }
   };
 
   const onPick = async (e: Event) => {
@@ -36,6 +74,7 @@ export function AddScript({ repo, clientId, getDriveToken }: Props) {
       await importBytes(file.name, await readFileBytes(file));
     } catch {
       setStatus(`Couldn't read ${file.name}`);
+      setNotes([]);
     }
   };
 
@@ -63,27 +102,55 @@ export function AddScript({ repo, clientId, getDriveToken }: Props) {
         : code === 'not-a-doc' ? "That link isn't a Google Doc."
         : "Couldn't import that document. Check your connection and try again.",
       );
+      setNotes([]);
     } finally {
       setBusy(false);
     }
   };
 
+  const banner = classify && !aiSeen ? (
+    <div class="notice">
+      <span>{AI_NOTICE}</span>
+      <button onClick={() => { localStorage.setItem('aiNoticeSeen', '1'); setAiSeen(true); }}>OK</button>
+    </div>
+  ) : null;
+
+  const dialog = unavailable ? (
+    <div class="toast" role="alert">
+      <span>The AI reading is unavailable right now.</span>
+      <button onClick={() => void importBasicAnyway()}>Import with basic reading anyway</button>
+      <button onClick={() => setUnavailable(null)}>Try again later</button>
+    </div>
+  ) : null;
+
+  const statusLine = (
+    <>
+      <span class="status">{status}</span>
+      {notes.map((n) => <span class="status" key={n}>{n}</span>)}
+    </>
+  );
+
   if (!getDriveToken) {
     return (
-      <div class="topbar">
-        <span class="status">{status}</span>
-        <label class="add-btn" aria-label="Add script file">
-          +
-          <input type="file" accept={FILE_ACCEPT} hidden onChange={onPick} />
-        </label>
-      </div>
+      <>
+        {banner}
+        <div class="topbar">
+          <span class="status-col">{statusLine}</span>
+          <label class="add-btn" aria-label="Add script file">
+            +
+            <input type="file" accept={FILE_ACCEPT} hidden onChange={onPick} />
+          </label>
+        </div>
+        {dialog}
+      </>
     );
   }
 
   return (
     <>
+      {banner}
       <div class="topbar">
-        <span class="status">{status}</span>
+        <span class="status-col">{statusLine}</span>
         <button class="add-btn" aria-label="Add script" onClick={() => { setOpen(!open); setLinkMode(false); }}>+</button>
       </div>
       {open && !linkMode && (
@@ -107,6 +174,7 @@ export function AddScript({ repo, clientId, getDriveToken }: Props) {
           <button onClick={() => { setLinkMode(false); setOpen(false); }}>Cancel</button>
         </div>
       )}
+      {dialog}
     </>
   );
 }
