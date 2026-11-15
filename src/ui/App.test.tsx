@@ -1,96 +1,68 @@
-import 'fake-indexeddb/auto';
-import { IDBFactory } from 'fake-indexeddb';
-import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/preact';
 import { App } from './App';
-import { openStore } from '../storage/db';
-import { makeDocx } from '../testing/makeDocx';
-import type { ScriptDoc } from '../model/types';
+import { createMemoryBackend, createMemoryRepo, type MemoryBackend } from '../data/memoryRepo';
+import type { AuthApi, AuthUser } from '../data/types';
 
-const seed: ScriptDoc = {
-  fileId: 'f1', name: 'Batch one.docx', updatedAt: 1,
-  videos: [{ id: 'v1', title: 'Hook video', sections: [
-    { id: 'a', text: 'first para', location: 'Kitchen', done: true, updatedAt: 1 },
-    { id: 'b', text: 'second para', location: null, done: false, updatedAt: 1 },
-  ] }],
-  orphans: [{ id: 'o', text: 'removed text', location: 'Garage', done: true, updatedAt: 1 }],
-};
-
-beforeEach(() => { (globalThis as any).indexedDB = new IDBFactory(); location.hash = ''; });
 afterEach(cleanup);
+beforeEach(() => { location.hash = ''; });
 
-describe('App', () => {
-  test('lists scripts with progress, opens a video, persists a done toggle', async () => {
-    const store = await openStore();
-    await store.putScript(seed);
-    const { findByText, getByText, container } = render(<App store={store} />);
-    expect(await findByText('Batch one.docx')).toBeTruthy();
-    expect(getByText('1/2 done')).toBeTruthy();
-    fireEvent.click(getByText('Batch one.docx'));
-    fireEvent.click(await findByText('Hook video'));
-    fireEvent.click(await waitFor(() => container.querySelectorAll('[data-section]')[1] as Element));
-    fireEvent.click(getByText('Mark done'));
-    await waitFor(async () => {
-      const saved = await (await openStore()).getScript('f1');
-      expect(saved!.videos[0].sections[1].done).toBe(true);
-    });
+function fakeAuth(initial: AuthUser | null, signIn?: () => Promise<void>) {
+  let cb: (u: AuthUser | null) => void = () => {};
+  const api: AuthApi & { emit(u: AuthUser | null): void } = {
+    onUser(c) { cb = c; c(initial); return () => {}; },
+    signIn: signIn ?? (async () => {}),
+    signOut: async () => {},
+    emit: (u) => cb(u),
+  };
+  return api;
+}
+const anna: AuthUser = { email: 'anna@x.com', name: 'Anna' };
+
+async function seeded() {
+  const backend = createMemoryBackend();
+  const boss = createMemoryRepo({ backend, user: { email: 'boss@x.com', name: 'B' }, adminEmail: 'boss@x.com' });
+  const c1 = await boss.createClient('Acme');
+  await boss.createClient('Beta');
+  await boss.setMembers(c1, ['anna@x.com']);
+  const makeRepo = (u: AuthUser) => createMemoryRepo({ backend, user: u, adminEmail: 'boss@x.com' });
+  return { backend, boss, c1, makeRepo };
+}
+
+describe('App shell', () => {
+  test('signed-out shows the sign-in button', async () => {
+    const { makeRepo } = await seeded();
+    const { findByText } = render(<App auth={fakeAuth(null)} makeRepo={makeRepo} />);
+    expect(await findByText('Sign in with Google')).toBeTruthy();
   });
 
-  test('orphans view lists sections no longer in the script', async () => {
-    const store = await openStore();
-    await store.putScript(seed);
-    const { findByText, getByText } = render(<App store={store} />);
-    fireEvent.click(await findByText('Batch one.docx'));
-    fireEvent.click(await findByText(/no longer in script/i));
-    expect(await findByText('removed text')).toBeTruthy();
-    expect(getByText(/Garage/)).toBeTruthy();
+  test('a failed sign-in shows a friendly message', async () => {
+    const { makeRepo } = await seeded();
+    const signIn = vi.fn().mockRejectedValue(new Error('popup closed'));
+    const { findByText } = render(<App auth={fakeAuth(null, signIn)} makeRepo={makeRepo} />);
+    fireEvent.click(await findByText('Sign in with Google'));
+    expect(await findByText(/Sign-in didn.t complete, try again/)).toBeTruthy();
   });
 
-  test('empty store shows a hint instead of a blank screen', async () => {
-    const { findByText } = render(<App store={await openStore()} />);
-    expect(await findByText(/No scripts yet/i)).toBeTruthy();
-  });
-});
-
-describe('App: manual add (+)', () => {
-  const pick = (container: Element, file: File) =>
-    fireEvent.change(container.querySelector('input[type=file]')!, { target: { files: [file] } });
-  const docxFile = async (name: string, ...paras: string[]) =>
-    new File([await makeDocx([{ text: 'Manual title', style: 'Heading1' }, ...paras.map((text) => ({ text }))])], name);
-
-  test('+ adds a .docx from the device as a script', async () => {
-    const store = await openStore();
-    const { container, findByText, getByLabelText } = render(<App store={store} />);
-    await findByText(/No scripts yet/i);
-    expect(getByLabelText('Add script file')).toBeTruthy();
-    pick(container, await docxFile('Local batch.docx', 'one', 'two'));
-    expect(await findByText('Local batch.docx')).toBeTruthy();
-    expect((await store.getScripts())[0].videos[0].sections.map((s) => s.text)).toEqual(['one', 'two']);
+  test('a user with no clients sees how to get access, with their email', async () => {
+    const { makeRepo } = await seeded();
+    const { findByText } = render(<App auth={fakeAuth({ email: 'eve@x.com', name: 'Eve' })} makeRepo={makeRepo} />);
+    expect(await findByText(/Ask the admin to add your email \(eve@x\.com\)/)).toBeTruthy();
   });
 
-  test('an unreadable file shows an error and adds nothing', async () => {
-    const store = await openStore();
-    const { container, findByText } = render(<App store={store} />);
-    await findByText(/No scripts yet/i);
-    pick(container, new File(['not a docx'], 'bad.docx'));
-    expect(await findByText(/Couldn.t read bad\.docx/)).toBeTruthy();
-    expect(await store.getScripts()).toEqual([]);
+  test('a member sees only their clients', async () => {
+    const { makeRepo } = await seeded();
+    const { findByText, queryByText } = render(<App auth={fakeAuth(anna)} makeRepo={makeRepo} />);
+    expect(await findByText('Acme')).toBeTruthy();
+    expect(queryByText('Beta')).toBeNull();
   });
 
-  test('adding the same file name again keeps locations and done flags', async () => {
-    const store = await openStore();
-    const { container, findByText } = render(<App store={store} />);
-    await findByText(/No scripts yet/i);
-    pick(container, await docxFile('Same.docx', 'one', 'two'));
-    await findByText('Same.docx');
-    const d = (await store.getScripts())[0];
-    d.videos[0].sections[0].done = true;
-    await store.putScript(d);
-    pick(container, await docxFile('Same.docx', 'one', 'two changed'));
-    await waitFor(async () => {
-      const all = await store.getScripts();
-      expect(all).toHaveLength(1);
-      expect(all[0].videos[0].sections.map((s) => [s.text, s.done])).toEqual([['one', true], ['two changed', false]]);
-    });
+  test('signing in later switches from the sign-in screen to the clients', async () => {
+    const { makeRepo } = await seeded();
+    const auth = fakeAuth(null);
+    const { findByText } = render(<App auth={auth} makeRepo={makeRepo} />);
+    await findByText('Sign in with Google');
+    auth.emit(anna);
+    expect(await findByText('Acme')).toBeTruthy();
   });
 });
