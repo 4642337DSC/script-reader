@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'preact/hooks';
 import type { Video } from '../model/types';
-import { mergeWithPrevious, setLocation, splitSection, toggleDone } from '../model/sections';
+import { mergeWithPrevious, setLocation, setText, setVideoNotes, setVideoTitle, splitSection, toggleDone } from '../model/sections';
 import { recordLocation } from '../model/recentLocations';
 import { Reader } from './Reader';
 import { SectionMenu } from './SectionMenu';
 import { LocationSheet } from './LocationSheet';
 import { SplitView } from './SplitView';
+import { EditText } from './EditText';
+import { NotesPanel } from './NotesPanel';
 
 interface Props {
   video: Video;
@@ -16,7 +18,7 @@ interface Props {
   now?: () => number;
 }
 
-type Mode = { kind: 'none' } | { kind: 'menu' | 'location' | 'split'; id: string };
+type Mode = { kind: 'none' } | { kind: 'title' } | { kind: 'menu' | 'location' | 'split' | 'edit'; id: string };
 
 export function ReaderScreen({ video: initial, recents: initialRecents, fontScale, onFontScale, onChange, now = Date.now }: Props) {
   const [video, setVideo] = useState(initial);
@@ -31,7 +33,7 @@ export function ReaderScreen({ video: initial, recents: initialRecents, fontScal
     setRecents(r);
     onChange(v, r);
   };
-  const section = mode.kind === 'none' ? null : video.sections.find((s) => s.id === mode.id) ?? null;
+  const section = mode.kind === 'none' || mode.kind === 'title' ? null : video.sections.find((s) => s.id === mode.id) ?? null;
   const index = section ? video.sections.indexOf(section) : -1;
 
   return (
@@ -41,16 +43,35 @@ export function ReaderScreen({ video: initial, recents: initialRecents, fontScal
         fontScale={fontScale}
         onFontScale={onFontScale}
         onSectionTap={(id) => { setUndoId(null); setMode({ kind: 'menu', id }); }}
+        onEditTitle={() => setMode({ kind: 'title' })}
+        afterHeader={<NotesPanel notes={video.notes ?? ''} onSave={(n) => commit(setVideoNotes(video, n))} />}
       />
+      {mode.kind === 'title' && (
+        <EditText
+          initial={video.title}
+          label="Title"
+          onSave={(t) => { commit(setVideoTitle(video, t)); setMode({ kind: 'none' }); }}
+          onCancel={() => setMode({ kind: 'none' })}
+        />
+      )}
       {section && mode.kind === 'menu' && (
         <SectionMenu
           section={section}
           canMerge={index > 0}
           onLocation={() => setMode({ kind: 'location', id: section.id })}
+          onEdit={() => setMode({ kind: 'edit', id: section.id })}
           onToggleDone={() => { commit(toggleDone(video, section.id, now())); setMode({ kind: 'none' }); }}
           onSplit={() => setMode({ kind: 'split', id: section.id })}
           onMerge={() => { commit(mergeWithPrevious(video, section.id, now())); setMode({ kind: 'none' }); }}
           onClose={() => setMode({ kind: 'none' })}
+        />
+      )}
+      {section && mode.kind === 'edit' && (
+        <EditText
+          initial={section.text}
+          label="Section text"
+          onSave={(t) => { commit(setText(video, section.id, t, now())); setMode({ kind: 'none' }); }}
+          onCancel={() => setMode({ kind: 'none' })}
         />
       )}
       {section && mode.kind === 'location' && (
