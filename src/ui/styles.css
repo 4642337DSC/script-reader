@@ -48,6 +48,9 @@ html, body { margin: 0; background: #101114; color: #e8e8ea; font-family: system
 
 .edit-box { width: 100%; min-height: 8rem; background: #101114; color: inherit; border: 1px solid #444; border-radius: 8px; padding: .6rem; font-size: 1rem; font-family: inherit; }
 .edit-title { min-width: 44px; min-height: 44px; background: #22252b; color: inherit; border: 0; border-radius: 8px; }
+.panel-row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: .4rem; margin: .4rem 0 .8rem; }
+.panel-row > .notes-panel, .panel-row > .broll-panel { display: contents; }
+.panel-row .notes-body, .panel-row .broll-body { order: 1; flex: 0 0 100%; margin-top: 0; }
 .notes-panel { margin: .4rem 0 .8rem; }
 .notes-toggle { min-height: 44px; background: #22252b; color: #8ab4ff; border: 0; border-radius: 8px; padding: 0 1rem; }
 .notes-body { background: #1b1d22; border-radius: 10px; padding: .4rem 1rem; margin-top: .4rem; }
@@ -71,6 +74,10 @@ html, body { margin: 0; background: #101114; color: #e8e8ea; font-family: system
 .section { display: flex; gap: .6rem; border-left: 0; padding: 0; margin: .9rem 0; cursor: default; opacity: 1; }
 .section.done { opacity: .5; }
 .done-btn { flex: 0 0 44px; min-height: 64px; align-self: stretch; background: #2a2e36; border: 0; border-radius: 10px 0 0 10px; color: #4caf50; font-size: 1.4rem; border-left: 6px solid #555; padding: 0; }
+.done-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+.card-no { font-size: .95rem; font-weight: 700; color: #aab0bb; }
+.card-check { font-size: 1rem; line-height: 1; }
+.section.done .card-no { color: #4caf50; }
 .section.done .done-btn { border-left-color: #4caf50; background: #1f3326; }
 .section-body { flex: 1; min-width: 0; padding: .5rem .6rem .5rem 0; }
 .loc-btn { background: none; border: 0; padding: .3rem 0; min-height: 44px; text-align: left; cursor: pointer; font-family: inherit; }
@@ -115,7 +122,7 @@ html, body { margin: 0; background: #101114; color: #e8e8ea; font-family: system
 
 /* B-roll list */
 .broll-panel { margin: 0 0 .8rem; }
-.broll-toggle { min-height: 44px; background: #22252b; color: #c9b458; border: 0; border-radius: 8px; padding: 0 1rem; margin-left: .4rem; }
+.broll-toggle { min-height: 44px; background: #22252b; color: #c9b458; border: 0; border-radius: 8px; padding: 0 1rem; }
 .broll-body { background: #1b1d22; border-radius: 10px; padding: .4rem .8rem; margin-top: .4rem; }
 .broll-item { display: flex; align-items: center; gap: .5rem; min-height: 44px; }
 .broll-check { flex: 0 0 32px; width: 32px; height: 32px; border-radius: 8px; border: 2px solid #555; background: none; color: #4caf50; font-size: 1.1rem; padding: 0; }

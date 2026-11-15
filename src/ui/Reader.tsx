@@ -67,6 +67,7 @@ export function Reader({
           <Gap index={idx} over={over === `gap:${idx}`} joinId={idx > 0 ? s.id : undefined} onJoin={onJoin} />
           <SectionView
             section={s}
+            number={idx + 1}
             ctl={ctl}
             over={over === `sec:${s.id}`}
             onToggleDone={onToggleDone}

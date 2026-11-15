@@ -18,6 +18,8 @@ export interface WordCtl {
 
 interface Props {
   section: Section;
+  /** Position of the card in the video, starting at 1; shown in the left bar. */
+  number: number;
   ctl: WordCtl;
   over?: boolean;
   /** The coloured bar on the left: one tap toggles done. */
@@ -38,7 +40,7 @@ function InlineEdit({ initial, onSave, onCancel }: { initial: string; onSave: (t
   );
 }
 
-export function SectionView({ section, ctl, over, onToggleDone, onOpenLocation, onCycleTag, onAcceptSuggestion, onDismissSuggestion }: Props) {
+export function SectionView({ section, number, ctl, over, onToggleDone, onOpenLocation, onCycleTag, onAcceptSuggestion, onDismissSuggestion }: Props) {
   const suggestion = !section.location && section.suggestedLocation ? section.suggestedLocation : null;
   const sel = ctl.selection && ctl.selection.sectionId === section.id ? ctl.selection : null;
   const editing = ctl.editingId === section.id;
@@ -49,7 +51,7 @@ export function SectionView({ section, ctl, over, onToggleDone, onOpenLocation, 
         aria-label={section.done ? 'Mark not done' : 'Mark done'}
         aria-pressed={section.done}
         onClick={() => onToggleDone(section.id)}
-      >{section.done ? '✓' : ''}</button>
+      ><span class="card-no">{number}</span>{section.done && <span class="card-check">✓</span>}</button>
       <div class="section-body">
         <div class="section-top">
           <div class="section-meta">

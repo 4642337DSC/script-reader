@@ -244,7 +244,7 @@ export function ReaderScreen({
         }}
         onDismissSuggestion={(id) => commit(dismissSuggestion(video, id, now()))}
         afterHeader={(
-          <>
+          <div class="panel-row">
             <NotesPanel notes={video.notes ?? ''} onSave={(n) => commit(setVideoNotes(video, n))} />
             <BrollPanel
               items={video.broll ?? []}
@@ -253,7 +253,7 @@ export function ReaderScreen({
               onRemove={(id) => commit(removeBroll(video, id))}
               onAdd={(t) => commit(addBroll(video, t, now()))}
             />
-          </>
+          </div>
         )}
       />
       {locSection && (
