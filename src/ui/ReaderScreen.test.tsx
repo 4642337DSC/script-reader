@@ -2,7 +2,6 @@ import { afterEach, describe, expect, test, vi } from 'vitest';
 import { cleanup, fireEvent, render } from '@testing-library/preact';
 import { ReaderScreen } from './ReaderScreen';
 import { LocationSheet } from './LocationSheet';
-import { SplitView } from './SplitView';
 import type { Video } from '../model/types';
 
 afterEach(cleanup);
@@ -36,52 +35,81 @@ describe('LocationSheet', () => {
   });
 });
 
-describe('SplitView', () => {
-  test('tapping the 5th word splits at its character offset; first word is ignored', () => {
-    const onSplitAt = vi.fn();
-    const { getByText } = render(<SplitView text="one two three four five six" onSplitAt={onSplitAt} onCancel={() => {}} />);
-    fireEvent.click(getByText('one'));
-    expect(onSplitAt).not.toHaveBeenCalled();
-    fireEvent.click(getByText('five'));
-    expect(onSplitAt).toHaveBeenCalledWith('one two three four '.length);
-  });
-});
-
-describe('ReaderScreen', () => {
+describe('ReaderScreen: three direct taps instead of a menu', () => {
   const setup = () => {
     const onChange = vi.fn();
     const r = render(<ReaderScreen video={mkVideo()} recents={['Kitchen']} fontScale={1} onFontScale={() => {}} onChange={onChange} now={() => 5} />);
-    return { ...r, onChange };
+    const done = (i: number) => r.container.querySelectorAll('.done-btn')[i] as HTMLElement;
+    const loc = (i: number) => r.container.querySelectorAll('.loc-btn')[i] as HTMLElement;
+    const text = (i: number) => r.container.querySelectorAll('.section .text')[i] as HTMLElement;
+    return { ...r, onChange, done, loc, text };
   };
-  test('tap section -> Set location -> pick updates video and recents', () => {
-    const { container, getByText, onChange } = setup();
-    fireEvent.click(container.querySelectorAll('[data-section]')[0]);
-    fireEvent.click(getByText('Set location'));
-    fireEvent.click(getByText('Kitchen'));
-    const [video, recents] = onChange.mock.calls.at(-1)!;
+
+  test('tapping the done bar toggles done, and tapping again undoes it', () => {
+    const w = setup();
+    fireEvent.click(w.done(0));
+    expect(w.onChange.mock.calls.at(-1)![0].sections[0].done).toBe(true);
+    fireEvent.click(w.done(0));
+    expect(w.onChange.mock.calls.at(-1)![0].sections[0].done).toBe(false);
+  });
+
+  test('the done bar says what it will do, for screen readers too', () => {
+    const w = setup();
+    expect(w.done(0).getAttribute('aria-label')).toBe('Mark done');
+    fireEvent.click(w.done(0));
+    expect(w.done(0).getAttribute('aria-label')).toBe('Mark not done');
+    expect(w.done(0).getAttribute('aria-pressed')).toBe('true');
+  });
+
+  test('tapping the location label opens the location box; picking updates the video and recents', () => {
+    const w = setup();
+    fireEvent.click(w.loc(0));
+    fireEvent.click(w.getByText('Kitchen'));
+    const [video, recents] = w.onChange.mock.calls.at(-1)!;
     expect(video.sections[0].location).toBe('Kitchen');
     expect(recents[0]).toBe('Kitchen');
   });
-  test('tap section -> Mark done toggles done', () => {
-    const { container, getByText, onChange } = setup();
-    fireEvent.click(container.querySelectorAll('[data-section]')[0]);
-    fireEvent.click(getByText('Mark done'));
-    expect(onChange.mock.calls.at(-1)![0].sections[0].done).toBe(true);
+
+  test('tapping the text opens the paragraph editor; there is no popup menu any more', () => {
+    const w = setup();
+    fireEvent.click(w.text(0));
+    expect(w.getByText('Merge with previous')).toBeTruthy();
+    expect(w.getByText('Edit text')).toBeTruthy();
+    expect(w.queryByText('Set location')).toBeNull();
+    expect(w.queryByText('Mark done')).toBeNull();
+    expect(w.queryByText('Split here')).toBeNull();
   });
-  test('Split here then word tap yields two sections; Undo merges back', () => {
-    const { container, getByText, onChange } = setup();
-    fireEvent.click(container.querySelectorAll('[data-section]')[0]);
-    fireEvent.click(getByText('Split here'));
-    fireEvent.click(getByText('four'));
-    const split = onChange.mock.calls.at(-1)![0];
-    expect(split.sections.map((s: any) => s.text)).toEqual(['one two three', 'four five six', 'second para']);
-    fireEvent.click(getByText('Undo'));
-    expect(onChange.mock.calls.at(-1)![0].sections.map((s: any) => s.text)).toEqual(['one two three four five six', 'second para']);
+
+  test('the done bar and the location label do not open the editor', () => {
+    const w = setup();
+    fireEvent.click(w.done(0));
+    fireEvent.click(w.loc(1));
+    expect(w.queryByText('Edit text')).toBeNull();
   });
-  test('Merge with previous is disabled on the first section', () => {
-    const { container, getByText } = setup();
-    fireEvent.click(container.querySelectorAll('[data-section]')[0]);
-    expect((getByText('Merge with previous') as HTMLButtonElement).disabled).toBe(true);
+
+  test('Split before the selected word in the editor yields two sections', () => {
+    const w = setup();
+    fireEvent.click(w.text(0));
+    fireEvent.click(w.getByText('four', { selector: '.mw-word' }));
+    fireEvent.click(w.getByText('Split before selected word'));
+    expect(w.onChange.mock.calls.at(-1)![0].sections.map((s: any) => s.text)).toEqual(['one two three', 'four five six', 'second para']);
+    expect(w.queryByText('Edit text')).toBeNull();
+  });
+
+  test('Merge with previous in the editor joins the paragraph to the one above', () => {
+    const w = setup();
+    fireEvent.click(w.text(1));
+    fireEvent.click(w.getByText('Merge with previous'));
+    expect(w.onChange.mock.calls.at(-1)![0].sections.map((s: any) => s.text)).toEqual(['one two three four five six second para']);
+  });
+
+  test('Edit text in the editor saves the new text', () => {
+    const w = setup();
+    fireEvent.click(w.text(1));
+    fireEvent.click(w.getByText('Edit text'));
+    fireEvent.input(w.getByLabelText('Section text'), { target: { value: 'second para fixed' } });
+    fireEvent.click(w.getByText('Save'));
+    expect(w.onChange.mock.calls.at(-1)![0].sections[1].text).toBe('second para fixed');
   });
 });
 

@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Video } from '../model/types';
 import { carveWordsIntoSection, moveWordsToAdjacentSection, wordsOf } from '../model/wordMoves';
+import { mergeWithPrevious, setText, splitSection } from '../model/sections';
+import { EditText } from './EditText';
 
 type Kind = 'prev' | 'next' | 'above' | 'below';
 interface Sel { start: number; end: number; anchor: number; phase: 'anchored' | 'range' }
@@ -33,6 +35,7 @@ export function MoveWords({ video, sectionId, onApply, onCancel, now = Date.now,
   const [sel, setSel] = useState<Sel | null>(null);
   const [message, setMessage] = useState('');
   const [over, setOver] = useState<Kind | null>(null);
+  const [editing, setEditing] = useState(false);
   const [ghost, setGhost] = useState<{ x: number; y: number } | null>(null);
   const selRef = useRef<Sel | null>(null);
   selRef.current = sel;
@@ -49,6 +52,16 @@ export function MoveWords({ video, sectionId, onApply, onCancel, now = Date.now,
       : carveWordsIntoSection(video, sectionId, s.start, s.end, kind === 'above' ? 'before' : 'after', now());
     if (r.rejected) { setMessage(r.rejected); return; }
     onApply(r.video);
+  };
+
+  const split = () => {
+    const s = selRef.current;
+    if (!s) { setMessage('Select the word the new paragraph should start with.'); return; }
+    if (s.start === 0) { setMessage('Select a word after the first one to split before it.'); return; }
+    const starts = [...section.text.matchAll(/\S+/g)].map((m) => m.index ?? 0);
+    const r = splitSection(video, sectionId, starts[s.start], now());
+    if (r === video) { setMessage('That split is not possible here.'); return; }
+    onApply(r);
   };
 
   const tap = (i: number) => {
@@ -117,7 +130,7 @@ export function MoveWords({ video, sectionId, onApply, onCancel, now = Date.now,
 
   return (
     <div class="mw-overlay">
-      <p class="status">Tap the first and last word to select, or press and hold a word. Then drag it onto a paragraph or a gap, or use the buttons.</p>
+      <p class="status">Tap the first and last word to select, or press and hold a word. Drag onto a paragraph or a gap, or use the buttons.</p>
       {prev ? zone('prev', '', prev.text) : null}
       {zone('above', 'Drop here: new paragraph above')}
       <div class="mw-current" data-section-current>
@@ -141,6 +154,19 @@ export function MoveWords({ video, sectionId, onApply, onCancel, now = Date.now,
         <button class="chip" onClick={() => apply('below')}>New paragraph below</button>
         <button class="chip" onClick={onCancel}>Cancel</button>
       </div>
+      <div class="chips">
+        <button class="chip" onClick={() => setEditing(true)}>Edit text</button>
+        <button class="chip" onClick={split}>Split before selected word</button>
+        <button class="chip" disabled={!prev} onClick={() => onApply(mergeWithPrevious(video, sectionId, now()))}>Merge with previous</button>
+      </div>
+      {editing && (
+        <EditText
+          initial={section.text}
+          label="Section text"
+          onSave={(t) => onApply(setText(video, sectionId, t, now()))}
+          onCancel={() => setEditing(false)}
+        />
+      )}
       {ghost && sel && (
         <div class="mw-ghost" style={{ left: `${ghost.x + 8}px`, top: `${ghost.y + 8}px` }}>
           {ws.slice(sel.start, sel.end).join(' ')}

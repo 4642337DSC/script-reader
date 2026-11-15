@@ -82,8 +82,7 @@ describe('suggested locations', () => {
   test('no chip once the section has a real location', async () => {
     const w = await open(doc, 'Film');
     await w.findByText('📍 tipografie?');
-    fireEvent.click(w.getByText('first line'));
-    fireEvent.click(w.getByText('Set location'));
+    fireEvent.click(w.container.querySelectorAll('.loc-btn')[0]);
     fireEvent.input(w.getByPlaceholderText('Location'), { target: { value: 'Office' } });
     fireEvent.click(w.getByText('Save'));
     expect(await w.findByText('📍 Office')).toBeTruthy();

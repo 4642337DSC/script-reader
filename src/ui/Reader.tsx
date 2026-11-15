@@ -9,7 +9,9 @@ const STEP = 0.25;
 interface Props {
   video: Video;
   fontScale: number;
-  onSectionTap: (id: string) => void;
+  onToggleDone: (id: string) => void;
+  onOpenLocation: (id: string) => void;
+  onOpenEditor: (id: string) => void;
   onFontScale: (scale: number) => void;
   onEditTitle?: () => void;
   onAcceptSuggestion?: (id: string) => void;
@@ -17,7 +19,7 @@ interface Props {
   afterHeader?: ComponentChildren;
 }
 
-export function Reader({ video, fontScale, onSectionTap, onFontScale, onEditTitle, onAcceptSuggestion, onDismissSuggestion, afterHeader }: Props) {
+export function Reader({ video, fontScale, onToggleDone, onOpenLocation, onOpenEditor, onFontScale, onEditTitle, onAcceptSuggestion, onDismissSuggestion, afterHeader }: Props) {
   const clamp = (n: number) => Math.min(MAX_SCALE, Math.max(MIN_SCALE, n));
   return (
     <div class="reader" style={{ '--scale': String(fontScale) } as any}>
@@ -31,7 +33,7 @@ export function Reader({ video, fontScale, onSectionTap, onFontScale, onEditTitl
       </header>
       {afterHeader}
       {video.sections.map((s) => (
-        <SectionView key={s.id} section={s} onTap={onSectionTap} onAcceptSuggestion={onAcceptSuggestion} onDismissSuggestion={onDismissSuggestion} />
+        <SectionView key={s.id} section={s} onToggleDone={onToggleDone} onOpenLocation={onOpenLocation} onOpenEditor={onOpenEditor} onAcceptSuggestion={onAcceptSuggestion} onDismissSuggestion={onDismissSuggestion} />
       ))}
     </div>
   );

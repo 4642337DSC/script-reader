@@ -1,11 +1,9 @@
 import { useEffect, useState } from 'preact/hooks';
 import type { Video } from '../model/types';
-import { acceptSuggestion, dismissSuggestion, mergeWithPrevious, setLocation, setText, setVideoNotes, setVideoTitle, splitSection, toggleDone } from '../model/sections';
+import { acceptSuggestion, dismissSuggestion, setLocation, setVideoNotes, setVideoTitle, toggleDone } from '../model/sections';
 import { recordLocation } from '../model/recentLocations';
 import { Reader } from './Reader';
-import { SectionMenu } from './SectionMenu';
 import { LocationSheet } from './LocationSheet';
-import { SplitView } from './SplitView';
 import { EditText } from './EditText';
 import { NotesPanel } from './NotesPanel';
 import { MoveWords } from './MoveWords';
@@ -19,23 +17,25 @@ interface Props {
   now?: () => number;
 }
 
-type Mode = { kind: 'none' } | { kind: 'title' } | { kind: 'menu' | 'location' | 'split' | 'edit' | 'move'; id: string };
+type Mode = { kind: 'none' } | { kind: 'title' } | { kind: 'location' | 'editor'; id: string };
 
+/**
+ * Three direct taps, no popup menu: the bar on the left toggles done, the location label opens the location box,
+ * and the text opens the paragraph editor (edit text, split, merge, move words).
+ */
 export function ReaderScreen({ video: initial, recents: initialRecents, fontScale, onFontScale, onChange, now = Date.now }: Props) {
   const [video, setVideo] = useState(initial);
   useEffect(() => { setVideo(initial); }, [initial]);
   const [recents, setRecents] = useState(initialRecents);
   useEffect(() => { setRecents(initialRecents); }, [initialRecents]);
   const [mode, setMode] = useState<Mode>({ kind: 'none' });
-  const [undoId, setUndoId] = useState<string | null>(null);
 
   const commit = (v: Video, r: string[] = recents) => {
     setVideo(v);
     setRecents(r);
     onChange(v, r);
   };
-  const section = mode.kind === 'none' || mode.kind === 'title' ? null : video.sections.find((s) => s.id === mode.id) ?? null;
-  const index = section ? video.sections.indexOf(section) : -1;
+  const section = mode.kind === 'location' || mode.kind === 'editor' ? video.sections.find((s) => s.id === mode.id) ?? null : null;
 
   return (
     <>
@@ -43,7 +43,9 @@ export function ReaderScreen({ video: initial, recents: initialRecents, fontScal
         video={video}
         fontScale={fontScale}
         onFontScale={onFontScale}
-        onSectionTap={(id) => { setUndoId(null); setMode({ kind: 'menu', id }); }}
+        onToggleDone={(id) => commit(toggleDone(video, id, now()))}
+        onOpenLocation={(id) => setMode({ kind: 'location', id })}
+        onOpenEditor={(id) => setMode({ kind: 'editor', id })}
         onEditTitle={() => setMode({ kind: 'title' })}
         onAcceptSuggestion={(id) => {
           const s = video.sections.find((x) => x.id === id);
@@ -60,36 +62,6 @@ export function ReaderScreen({ video: initial, recents: initialRecents, fontScal
           onCancel={() => setMode({ kind: 'none' })}
         />
       )}
-      {section && mode.kind === 'menu' && (
-        <SectionMenu
-          section={section}
-          canMerge={index > 0}
-          onLocation={() => setMode({ kind: 'location', id: section.id })}
-          onEdit={() => setMode({ kind: 'edit', id: section.id })}
-          onToggleDone={() => { commit(toggleDone(video, section.id, now())); setMode({ kind: 'none' }); }}
-          onSplit={() => setMode({ kind: 'split', id: section.id })}
-          onMove={() => setMode({ kind: 'move', id: section.id })}
-          onMerge={() => { commit(mergeWithPrevious(video, section.id, now())); setMode({ kind: 'none' }); }}
-          onClose={() => setMode({ kind: 'none' })}
-        />
-      )}
-      {section && mode.kind === 'move' && (
-        <MoveWords
-          video={video}
-          sectionId={section.id}
-          now={now}
-          onApply={(v) => { commit(v); setMode({ kind: 'none' }); }}
-          onCancel={() => setMode({ kind: 'none' })}
-        />
-      )}
-      {section && mode.kind === 'edit' && (
-        <EditText
-          initial={section.text}
-          label="Section text"
-          onSave={(t) => { commit(setText(video, section.id, t, now())); setMode({ kind: 'none' }); }}
-          onCancel={() => setMode({ kind: 'none' })}
-        />
-      )}
       {section && mode.kind === 'location' && (
         <LocationSheet
           recents={recents}
@@ -101,25 +73,14 @@ export function ReaderScreen({ video: initial, recents: initialRecents, fontScal
           onClose={() => setMode({ kind: 'none' })}
         />
       )}
-      {section && mode.kind === 'split' && (
-        <SplitView
-          text={section.text}
+      {section && mode.kind === 'editor' && (
+        <MoveWords
+          video={video}
+          sectionId={section.id}
+          now={now}
+          onApply={(v) => { commit(v); setMode({ kind: 'none' }); }}
           onCancel={() => setMode({ kind: 'none' })}
-          onSplitAt={(at) => {
-            const next = splitSection(video, section.id, at, now());
-            if (next !== video) {
-              commit(next);
-              setUndoId(next.sections[index + 1].id);
-            }
-            setMode({ kind: 'none' });
-          }}
         />
-      )}
-      {undoId && (
-        <div class="toast">
-          Section split
-          <button onClick={() => { commit(mergeWithPrevious(video, undoId, now())); setUndoId(null); }}>Undo</button>
-        </div>
       )}
     </>
   );

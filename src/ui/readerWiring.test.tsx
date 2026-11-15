@@ -32,8 +32,7 @@ async function open() {
 describe('reader wiring', () => {
   test('ticking in the reader reaches another person\'s watcher', async () => {
     const w = await open();
-    fireEvent.click(w.getByText('first para'));
-    fireEvent.click(w.getByText('Mark done'));
+    fireEvent.click(w.container.querySelectorAll('.done-btn')[0]);
     await waitFor(() => expect(w.cur().doc.videos[0].sections[0].done).toBe(true));
   });
 
@@ -48,15 +47,13 @@ describe('reader wiring', () => {
   test('a location added by someone else shows as a suggestion for everyone in the client', async () => {
     const w = await open();
     await act(async () => { await w.bob.addRecent(w.c1, 'Garage'); });
-    fireEvent.click(w.getByText('first para'));
-    fireEvent.click(w.getByText('Set location'));
+    fireEvent.click(w.container.querySelectorAll('.loc-btn')[0]);
     expect(await w.findByText('Garage')).toBeTruthy();
   });
 
   test('picking a location saves it and adds it to the client suggestions', async () => {
     const w = await open();
-    fireEvent.click(w.getByText('first para'));
-    fireEvent.click(w.getByText('Set location'));
+    fireEvent.click(w.container.querySelectorAll('.loc-btn')[0]);
     fireEvent.input(w.getByPlaceholderText('Location'), { target: { value: 'Office' } });
     fireEvent.click(w.getByText('Save'));
     await waitFor(() => expect(w.cur().doc.videos[0].sections[0].location).toBe('Office'));

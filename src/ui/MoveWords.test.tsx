@@ -82,6 +82,52 @@ describe('MoveWords: select, then use the buttons', () => {
   });
 });
 
+describe('MoveWords: split, merge and edit text live in the same editor', () => {
+  test('Split before the selected word cuts the paragraph there', () => {
+    const r = setup('b');
+    fireEvent.click(word(r, 'six'));
+    fireEvent.click(r.getByText('Split before selected word'));
+    expect(texts(r.onApply.mock.calls[0][0])).toEqual(['one two three four', 'five', 'six seven', 'eight nine']);
+  });
+
+  test('Split needs a selected word after the first one', () => {
+    const r = setup('b');
+    fireEvent.click(r.getByText('Split before selected word'));
+    expect(r.getByRole('status').textContent).toMatch(/select/i);
+    fireEvent.click(word(r, 'five'));
+    fireEvent.click(r.getByText('Split before selected word'));
+    expect(r.getByRole('status').textContent).toMatch(/after the first/i);
+    expect(r.onApply).not.toHaveBeenCalled();
+  });
+
+  test('Merge with previous joins the paragraph to the one above; it is disabled for the first paragraph', () => {
+    const r = setup('b');
+    fireEvent.click(r.getByText('Merge with previous'));
+    expect(texts(r.onApply.mock.calls[0][0])).toEqual(['one two three four five six seven', 'eight nine']);
+    const first = setup('a');
+    expect((first.getAllByText('Merge with previous').at(-1) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  test('Edit text opens a text box and Save applies the new text', () => {
+    const r = setup('b');
+    fireEvent.click(r.getByText('Edit text'));
+    fireEvent.input(r.getByLabelText('Section text'), { target: { value: 'five six seven (fixed)' } });
+    fireEvent.click(r.getByText('Save'));
+    expect(texts(r.onApply.mock.calls[0][0])).toEqual(['one two three four', 'five six seven (fixed)', 'eight nine']);
+  });
+
+  test('Cancel in the text box goes back to the words without changing anything', () => {
+    const r = setup('b');
+    fireEvent.click(r.getByText('Edit text'));
+    expect(r.getByLabelText('Section text')).toBeTruthy();
+    const cancels = r.getAllByText('Cancel');
+    fireEvent.click(cancels[cancels.length - 1]);
+    expect(r.queryByLabelText('Section text')).toBeNull();
+    expect(r.container.querySelectorAll('.mw-word').length).toBeGreaterThan(0);
+    expect(r.onApply).not.toHaveBeenCalled();
+  });
+});
+
 describe('MoveWords: dragging', () => {
   const drop = (r: ReturnType<typeof setup>, target: string) => {
     const el = r.container.querySelector(`[data-drop="${target}"]`)!;
@@ -151,7 +197,7 @@ describe('Move words inside the reader', () => {
   const anna: AuthUser = { email: 'anna@x.com', name: 'Anna' };
   const auth: AuthApi = { onUser: (cb) => { cb(anna); return () => {}; }, signIn: async () => {}, signOut: async () => {} };
 
-  test('Move words from the section menu changes the script for everyone', async () => {
+  test('Tapping a paragraph opens the editor, and moving words changes the script for everyone', async () => {
     const backend = createMemoryBackend();
     const boss = createMemoryRepo({ backend, user: { email: 'boss@x.com', name: 'B' }, adminEmail: 'boss@x.com' });
     const c1 = await boss.createClient('Acme');
@@ -166,7 +212,6 @@ describe('Move words inside the reader', () => {
     fireEvent.click(await r.findByText('S.docx'));
     fireEvent.click(await r.findByText('Vid'));
     fireEvent.click(await r.findByText('alpha beta gamma'));
-    fireEvent.click(r.getByText('Move words'));
     fireEvent.click(r.getByText('gamma', { selector: '.mw-word' }));
     fireEvent.click(r.getByText('To next paragraph'));
     await r.findByText('gamma delta epsilon');

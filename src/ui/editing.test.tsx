@@ -51,8 +51,10 @@ describe('editing', () => {
     fireEvent.click(w.getByText('Edit text'));
     fireEvent.input(w.getByLabelText('Section text'), { target: { value: '   ' } });
     expect((w.getByText('Save') as HTMLButtonElement).disabled).toBe(true);
-    fireEvent.click(w.getByText('Cancel'));
+    const cancels = w.getAllByText('Cancel');
+    fireEvent.click(cancels[cancels.length - 1]);
     expect(w.queryByLabelText('Section text')).toBeNull();
+    fireEvent.click(w.getByText('Cancel'));
     expect(w.getByText('first para')).toBeTruthy();
     expect(w.cur().doc.videos[0].sections[0].text).toBe('first para');
   });

@@ -88,8 +88,7 @@ describe('resilience', () => {
     expect(await r.findByText('Up to date')).toBeTruthy();
     act(() => w.made[anna.email].setOnline(false));
     expect(await r.findByText('Offline')).toBeTruthy();
-    fireEvent.click(r.getByText('one'));
-    fireEvent.click(r.getByText('Mark done'));
+    fireEvent.click(r.container.querySelectorAll('.done-btn')[0]);
     expect(await r.findByText('Offline · unsynced changes')).toBeTruthy();
     act(() => w.made[anna.email].setOnline(true));
     expect(await r.findByText('Up to date')).toBeTruthy();
@@ -105,8 +104,8 @@ describe('resilience', () => {
     real.watchScript(w.c1, w.scriptId, (d) => { videoId = d!.doc.videos[0].id; }, () => {})();
     r.unmount();
     const r2 = render(<ReaderRoute repo={repo} clientId={w.c1} scriptId={w.scriptId} videoId={videoId} onError={() => {}} onNotice={(m) => notices.push(m)} />);
-    fireEvent.click(await r2.findByText('one'));
-    fireEvent.click(r2.getByText('Mark done'));
+    await r2.findByText('one');
+    fireEvent.click(r2.container.querySelectorAll('.done-btn')[0]);
     await waitFor(() => expect(notices).toEqual(["2 changes weren't saved because access was removed."]));
   });
 });
