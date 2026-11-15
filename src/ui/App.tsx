@@ -6,7 +6,7 @@ import { ReaderScreen } from './ReaderScreen';
 interface Props {
   store: Store;
   /** Runs a sync; resolves to a short status line. Optional until Drive is wired. */
-  sync?: () => Promise<string>;
+  sync?: (interactive: boolean) => Promise<string>;
 }
 
 const progress = (v: Video[]) => {
@@ -39,15 +39,15 @@ export function App({ store, sync }: Props) {
   }, [store]);
   useEffect(() => { void refresh(); }, [refresh]);
 
-  const runSync = async () => {
+  const runSync = async (interactive = false) => {
     if (!sync) return;
     setStatus('Syncing…');
-    try { setStatus(await sync()); } catch { setStatus('Sync failed (will retry)'); }
+    try { setStatus(await sync(interactive)); } catch { setStatus('Sync failed (will retry)'); }
     await refresh();
   };
   useEffect(() => {
     void runSync();
-    const on = () => void runSync();
+    const on = () => void runSync(false);
     addEventListener('online', on);
     return () => removeEventListener('online', on);
   }, []);
@@ -60,7 +60,7 @@ export function App({ store, sync }: Props) {
     <div class="topbar">
       {back !== undefined ? <button onClick={() => go(back)}>← Back</button> : <strong>Script Reader</strong>}
       <span class="status">{status}</span>
-      {sync && <button onClick={() => void runSync()}>Sync</button>}
+      {sync && <button onClick={() => void runSync(true)}>Sync</button>}
     </div>
   );
 
