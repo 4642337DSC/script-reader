@@ -1,16 +1,31 @@
 import { parseDocx, readDocxParagraphs } from '../docx/parseDocx';
 import { AiUnavailable, assembleImport, type AiUnavailableReason, type Classifier } from '../ai/classify';
 import { normalizeImport } from './importModel';
+import { validateShots, type Broller } from '../ai/broll';
 import type { ImportedVideo } from '../model/types';
 
 export interface SmartImportResult { videos: ImportedVideo[]; mode: 'ai' | 'basic'; notice?: string; reason?: AiUnavailableReason; detail?: string }
-export interface SmartImportDeps { classify?: Classifier; scriptExists: boolean }
+export interface SmartImportDeps { classify?: Classifier; extractBroll?: Broller; scriptExists: boolean }
 
 export const BASIC_NOTICE = 'AI reading unavailable, used the basic reading.';
 
 /** The rule-based reading (headings are titles, everything else is spoken text). */
 export async function basicImport(bytes: ArrayBuffer): Promise<ImportedVideo[]> {
   return normalizeImport(await parseDocx(bytes));
+}
+
+/** Best effort: splits each video's filming notes into a shot list. Any failure just leaves the list empty. */
+async function addBroll(videos: ImportedVideo[], extract?: Broller) {
+  if (!extract) return;
+  const asked = videos.map((v, index) => ({ index, notes: v.notes })).filter((x) => x.notes.trim());
+  if (!asked.length) return;
+  try {
+    const res = await extract(asked);
+    const valid = validateShots(res.map((r) => ({ i: r.index, shots: r.shots })), asked);
+    valid?.forEach((shots, index) => { if (shots.length) videos[index].broll = shots; });
+  } catch {
+    /* no shot list for this import */
+  }
 }
 
 /**
@@ -26,6 +41,7 @@ export async function smartImport(bytes: ArrayBuffer, deps: SmartImportDeps): Pr
     const videos = assembleImport(paragraphs, await deps.classify(paragraphs));
     if (videos.length === 0) throw new AiUnavailable('invalid', 'no videos found');
     if (videos.every((v) => v.paragraphs.length === 0)) throw new AiUnavailable('invalid', 'no spoken text found');
+    await addBroll(videos, deps.extractBroll);
     return { videos, mode: 'ai' };
   } catch (e) {
     const err = e instanceof AiUnavailable ? e : new AiUnavailable('network', e instanceof Error ? e.message : String(e));

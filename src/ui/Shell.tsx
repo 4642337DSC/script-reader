@@ -8,10 +8,11 @@ import { AdminScreen } from './AdminScreen';
 import { OrphansView } from './OrphansView';
 import { SyncBadge } from './SyncBadge';
 import type { Classifier } from '../ai/classify';
+import type { Broller } from '../ai/broll';
 
-interface Props { repo: Repo; user: AuthUser; onSignOut: () => void; getDriveToken?: () => Promise<string>; classify?: Classifier }
+interface Props { repo: Repo; user: AuthUser; onSignOut: () => void; getDriveToken?: () => Promise<string>; classify?: Classifier; extractBroll?: Broller }
 
-export function Shell({ repo, user, onSignOut, getDriveToken, classify }: Props) {
+export function Shell({ repo, user, onSignOut, getDriveToken, classify, extractBroll }: Props) {
   const [hash, go] = useHash();
   const route = parseRoute(hash);
   const [clients, setClients] = useState<Client[] | null>(null);
@@ -71,7 +72,7 @@ export function Shell({ repo, user, onSignOut, getDriveToken, classify }: Props)
   } else if (route.name === 'admin') {
     body = admin ? <AdminScreen repo={repo} clients={clients} /> : <p>…</p>;
   } else if (route.name === 'scripts') {
-    body = <ScriptList repo={repo} clientId={route.c} go={go} onError={onError} isAdmin={!!admin} getDriveToken={getDriveToken} classify={classify} />;
+    body = <ScriptList repo={repo} clientId={route.c} go={go} onError={onError} isAdmin={!!admin} getDriveToken={getDriveToken} classify={classify} extractBroll={extractBroll} />;
   } else if (route.name === 'videos') {
     body = <VideoList repo={repo} clientId={route.c} scriptId={route.s} go={go} onError={onError} />;
   } else if (route.name === 'orphans') {

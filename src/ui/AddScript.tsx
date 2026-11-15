@@ -2,6 +2,7 @@ import { useRef, useState } from 'preact/hooks';
 import { readFileBytes } from '../docx/readFile';
 import { fetchGoogleDoc, GDocError, parseDocLink } from '../gdocs/gdocs';
 import { AiUnavailable, type Classifier } from '../ai/classify';
+import type { Broller } from '../ai/broll';
 import { AutoSaveText } from './AutoSaveText';
 import { basicImport, smartImport } from '../import/smartImport';
 import type { Repo } from '../data/types';
@@ -13,12 +14,14 @@ interface Props {
   getDriveToken?: () => Promise<string>;
   /** When present, documents are read with Gemini; otherwise the basic rule-based reading is used. */
   classify?: Classifier;
+  /** When present, a video's filming notes are also split into a B-roll shot list on import. */
+  extractBroll?: Broller;
 }
 
 const FILE_ACCEPT = '.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 const AI_NOTICE = "Importing sends the document text to Google's Gemini service to read its structure. As we understand Google's terms, content sent on the free tier may be used by Google to improve its products.";
 
-export function AddScript({ repo, clientId, getDriveToken, classify }: Props) {
+export function AddScript({ repo, clientId, getDriveToken, classify, extractBroll }: Props) {
   const [status, setStatus] = useState('');
   const [notes, setNotes] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
@@ -54,7 +57,7 @@ export function AddScript({ repo, clientId, getDriveToken, classify }: Props) {
     }
     const exists = await repo.hasScript(clientId, name);
     try {
-      const res = await smartImport(bytes, { classify, scriptExists: exists });
+      const res = await smartImport(bytes, { classify, extractBroll, scriptExists: exists });
       finish(name, await repo.addScript(clientId, name, res.videos), res.notice, res.reason ? `${res.reason}${res.detail && res.detail !== res.reason ? ' (' + res.detail.slice(0, 400) + ')' : ''}` : undefined);
     } catch (e) {
       if (e instanceof AiUnavailable) { setUnavailable({ name, bytes, reason: `${e.reason}${e.message && e.message !== e.reason ? ' (' + e.message.slice(0, 400) + ')' : ''}` }); return; }

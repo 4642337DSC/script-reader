@@ -1,6 +1,7 @@
 import type { FirebaseApp } from 'firebase/app';
 import { getAI, getGenerativeModel, GoogleAIBackend, Schema } from 'firebase/ai';
-import { AiUnavailable, buildClassifyRequest, LABELS, validateLabels, type Classifier } from './classify';
+import { AiUnavailable, buildClassifyRequest, validateLabels, type Classifier } from './classify';
+import { buildBrollRequest, validateShots, type Broller } from './broll';
 import { GEMINI_MODEL } from './geminiConfig';
 
 export const MAX_PARAGRAPHS = 400;
@@ -57,22 +58,58 @@ export function createGeminiClassifier(generate: Generate): Classifier {
   };
 }
 
+const MAX_BROLL_CHARS = 30_000;
+
+/** Asks the model to split each video's filming notes into shots. Throws AiUnavailable; callers treat it as best effort. */
+export function createGeminiBroller(generate: Generate): Broller {
+  return async (items) => {
+    if (items.reduce((n, x) => n + x.notes.length, 0) > MAX_BROLL_CHARS) throw new AiUnavailable('too-large');
+    const { prompt, schema } = buildBrollRequest(items);
+    let text: string;
+    try {
+      text = await generate(prompt, schema);
+    } catch (e) {
+      throw mapError(e);
+    }
+    let raw: unknown;
+    try {
+      raw = JSON.parse(stripFence(text));
+    } catch {
+      throw new AiUnavailable('invalid', 'not JSON');
+    }
+    const shots = validateShots(raw, items);
+    if (!shots) throw new AiUnavailable('invalid', 'unusable shots');
+    return [...shots].map(([index, list]) => ({ index, shots: list }));
+  };
+}
+
+type JsonSchema = { type: string; items?: JsonSchema; properties?: Record<string, JsonSchema>; required?: string[]; enum?: string[] };
+
+/** Turns the plain JSON schemas used by the request builders into the SDK's Schema objects. */
+export function toSchema(s: JsonSchema): Schema {
+  switch (s.type) {
+    case 'array':
+      return Schema.array({ items: toSchema(s.items!) });
+    case 'object': {
+      const props = Object.fromEntries(Object.entries(s.properties ?? {}).map(([k, v]) => [k, toSchema(v)]));
+      const optional = Object.keys(props).filter((k) => !(s.required ?? []).includes(k));
+      return Schema.object({ properties: props, optionalProperties: optional });
+    }
+    case 'integer':
+      return Schema.integer();
+    default:
+      return s.enum ? Schema.enumString({ enum: s.enum }) : Schema.string();
+  }
+}
+
 /** Real generation through Firebase AI Logic (Gemini Developer API); no API key lives in this app. */
 export function createFirebaseGenerate(app: FirebaseApp): Generate {
   const ai = getAI(app, { backend: new GoogleAIBackend() });
-  const responseSchema = Schema.array({
-    items: Schema.object({
-      properties: {
-        i: Schema.integer(),
-        label: Schema.enumString({ enum: LABELS }),
-        cue: Schema.string(),
-      },
-      optionalProperties: ['cue'],
-    }),
-  });
-  const model = getGenerativeModel(ai, {
-    model: GEMINI_MODEL,
-    generationConfig: { responseMimeType: 'application/json', responseSchema, temperature: 0 },
-  });
-  return async (prompt) => (await model.generateContent(prompt)).response.text();
+  return async (prompt, schema) => {
+    const model = getGenerativeModel(ai, {
+      model: GEMINI_MODEL,
+      generationConfig: { responseMimeType: 'application/json', responseSchema: toSchema(schema as JsonSchema), temperature: 0 },
+    });
+    return (await model.generateContent(prompt)).response.text();
+  };
 }

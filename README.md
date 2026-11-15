@@ -64,6 +64,12 @@ notice; for a script that **already exists** the app asks first ("Import with ba
 later") so a different reading can't silently reshuffle it. Re-imports keep your text edits, locations and ticks on
 paragraphs whose source text did not change.
 
+**Shot tags and B-roll.** Every card has a small tag icon that cycles through 🌄 Wide, 🧍 Medium, 🔍 Close-up and
+🎙 Voiceover (one tag per card, set by hand). Every video has a **B-roll** checklist: on import Gemini splits the
+video's "Cadre și foto" filming notes into separate shots, each one a verbatim piece of your notes (anything that
+is not found in the notes is dropped, and if Gemini is unavailable the list simply starts empty). You can tick,
+edit, add and remove shots; a re-import never changes the list.
+
 Known limits: Firebase App Check is not enabled, so anyone who copies the public web config could spend the free
 Gemini quota (the free tier simply stops when exhausted; imports then fall back to the basic reading). Two people
 importing the same new file name at the very same moment can still create two scripts with that name. Documents over

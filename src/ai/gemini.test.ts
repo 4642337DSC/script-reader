@@ -65,3 +65,27 @@ describe('createGeminiClassifier', () => {
     expect(generate).not.toHaveBeenCalled();
   });
 });
+
+describe('toSchema', () => {
+  test('builds the same SDK schema the label request used before it was generic', async () => {
+    const { Schema } = await import('firebase/ai');
+    const { toSchema } = await import('./gemini');
+    const { buildClassifyRequest, LABELS } = await import('./classify');
+    const old = Schema.array({
+      items: Schema.object({
+        properties: { i: Schema.integer(), label: Schema.enumString({ enum: LABELS }), cue: Schema.string() },
+        optionalProperties: ['cue'],
+      }),
+    });
+    const built = toSchema(buildClassifyRequest([]).schema as never);
+    expect(JSON.parse(JSON.stringify(built))).toEqual(JSON.parse(JSON.stringify(old)));
+  });
+
+  test('handles the shot-list schema: an array of objects with a list of strings', async () => {
+    const { toSchema } = await import('./gemini');
+    const { buildBrollRequest } = await import('./broll');
+    const json = JSON.stringify(toSchema(buildBrollRequest([]).schema as never));
+    expect(json).toContain('shots');
+    expect(json).toContain('"array"');
+  });
+});
