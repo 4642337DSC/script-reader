@@ -18,6 +18,8 @@ interface Props {
    */
   keepOpen?: boolean;
   class?: string;
+  /** Gives a button elsewhere a way to save now (the same as pressing Enter). */
+  submitRef?: { current: (() => void) | null };
   onSave: (text: string) => boolean | void;
   onCancel?: () => void;
 }
@@ -28,7 +30,7 @@ interface Props {
  */
 export function AutoSaveText({
   initial, label, placeholder, multiline = true, enterSaves = true, allowEmpty = false, rows = 4, autoFocus = true, keepOpen = false,
-  class: cls = 'edit-box', onSave, onCancel,
+  class: cls = 'edit-box', submitRef, onSave, onCancel,
 }: Props) {
   const [text, setText] = useState(initial);
   const textRef = useRef(text);
@@ -50,6 +52,11 @@ export function AutoSaveText({
     }
     if (keepOpen) finished.current = false;
   };
+
+  useEffect(() => {
+    if (submitRef) submitRef.current = () => finish(true);
+    return () => { if (submitRef) submitRef.current = null; };
+  });
 
   useEffect(() => {
     // tapping a non-focusable area does not always blur the box on phones, so watch taps directly

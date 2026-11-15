@@ -316,9 +316,13 @@ export function createFirestoreRepo(db: Firestore, user: AuthUser): Repo {
     },
 
     async deleteScript(clientId, scriptId) {
+      // The script document goes first, so it leaves everyone's list at once. Cleaning up its pieces (sections,
+      // videos, shots) can take seconds for a big script; doing that first used to leave the script on screen
+      // with no sign that anything was happening. A stale save in the meantime fails (its batch updates the
+      // script document), so nothing can come back to life.
+      await deleteDoc(doc(scriptsCol(clientId), scriptId));
       const [sec, vid, br] = await Promise.all([getDocs(sectionsCol(clientId, scriptId)), getDocs(videosCol(clientId, scriptId)), getDocs(brollCol(clientId, scriptId))]);
       await commitOps([...sec.docs, ...vid.docs, ...br.docs].map((d) => (b: WriteBatch) => b.delete(d.ref)));
-      await deleteDoc(doc(scriptsCol(clientId), scriptId));
     },
 
     saveScript: (clientId, scriptId, before, after) => save(clientId, scriptId, before, after),

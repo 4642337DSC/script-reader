@@ -48,6 +48,33 @@ describe('import from a Google Docs link', () => {
     expect(String(fetchMock.mock.calls[0][0])).toContain('DOC123');
   });
 
+  test('there is an Import button next to the box; clicking it imports once (not twice)', async () => {
+    const bytes = await makeDocx([{ text: 'Video one', style: 'Heading1' }, { text: 'first' }]);
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ name: 'Via button', mimeType: DOC_MIME })))
+      .mockResolvedValueOnce(new Response(bytes));
+    vi.stubGlobal('fetch', fetchMock);
+    const getDriveToken = vi.fn().mockResolvedValue('tok');
+    const r = await setup(getDriveToken);
+    fireEvent.input(await openLinkBox(r), { target: { value: LINK } });
+    const button = r.getByText('Import');
+    // a real tap presses down first (which leaves the box) and then clicks
+    fireEvent.pointerDown(button);
+    fireEvent.click(button);
+    expect(await r.findByText('Added Via button')).toBeTruthy();
+    expect(getDriveToken).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  test('clicking Import with an invalid link says so and keeps the text', async () => {
+    const r = await setup(vi.fn().mockResolvedValue('tok'));
+    const box = (await openLinkBox(r)) as HTMLInputElement;
+    fireEvent.input(box, { target: { value: 'https://example.com/x' } });
+    fireEvent.click(r.getByText('Import'));
+    expect(await r.findByText("That doesn't look like a Google Docs link.")).toBeTruthy();
+    expect(box.value).toBe('https://example.com/x');
+  });
+
   test('something that is not a Google Docs link is rejected without asking for permission', async () => {
     const getDriveToken = vi.fn().mockResolvedValue('tok');
     const r = await setup(getDriveToken);

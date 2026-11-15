@@ -26,6 +26,7 @@ export function AddScript({ repo, clientId, getDriveToken, classify, extractBrol
   const [notes, setNotes] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
   const [linkMode, setLinkMode] = useState(false);
+  const submitLink = useRef<(() => void) | null>(null);
   const [unavailable, setUnavailable] = useState<{ name: string; bytes: ArrayBuffer; reason: string } | null>(null);
   const [aiSeen, setAiSeen] = useState(() => localStorage.getItem('aiNoticeSeen') === '1');
 
@@ -190,9 +191,11 @@ export function AddScript({ repo, clientId, getDriveToken, classify, extractBrol
             initial=""
             label="Google Docs link"
             placeholder="Paste Google Docs link"
+            submitRef={submitLink}
             onSave={importLink}
             onCancel={() => { setLinkMode(false); setOpen(false); }}
           />
+          <button class="chip" onClick={() => submitLink.current?.()}>Import</button>
         </div>
       )}
       {dialog}
