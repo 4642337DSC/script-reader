@@ -25,5 +25,5 @@ export default defineConfig({
     }),
   ],
   base: './',
-  test: { environment: 'jsdom', globals: false },
+  test: { environment: 'jsdom', globals: false, exclude: ['test/**', 'node_modules/**'] },
 });
