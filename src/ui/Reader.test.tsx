@@ -19,7 +19,7 @@ const ctl = (over: Partial<WordCtl> = {}): WordCtl => ({
   onWordClick: () => {}, onWordPointerDown: () => {}, onStartEdit: () => {}, onSaveEdit: () => {}, onCancelEdit: () => {},
   ...over,
 });
-const base = { fontScale: 1, onToggleDone: () => {}, onOpenLocation: () => {}, onJoin: () => {}, onFontScale: () => {} };
+const base = { fontScale: 1, onToggleDone: () => {}, onOpenLocation: () => {}, onCycleTag: () => {}, onJoin: () => {}, onFontScale: () => {} };
 
 describe('Reader', () => {
   test('renders title and one block per section', () => {

@@ -100,3 +100,13 @@ html, body { margin: 0; background: #101114; color: #e8e8ea; font-family: system
 .loc-pop .pop-row input { flex: 1; min-width: 0; }
 .loc-pop .pop-small { margin-top: .4rem; justify-content: flex-end; }
 .loc-pop .chips { margin: .5rem 0 0; }
+
+/* shot tags on the cards */
+.section-meta { display: flex; align-items: center; gap: .3rem; flex-wrap: wrap; }
+.tag-btn { min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; gap: .3rem; padding: 0 .55rem; background: #22252b; color: #e8e8ea; border: 0; border-radius: 999px; font-size: .85rem; cursor: pointer; }
+.tag-btn.empty { background: none; opacity: .35; filter: grayscale(1); }
+.tag-btn[data-tag="wide"] { background: #1f3a2c; }
+.tag-btn[data-tag="medium"] { background: #3a3320; }
+.tag-btn[data-tag="closeup"] { background: #3a2a2a; }
+.tag-btn[data-tag="voiceover"] { background: #2a2a45; }
+.tag-name { font-size: .75rem; opacity: .9; }

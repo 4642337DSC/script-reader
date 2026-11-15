@@ -60,7 +60,7 @@ export function flattenDoc(
   const row = (s: Section, videoId: string | null): SectionRow => ({
     id: s.id, videoId, order: orders[s.id], text: s.text, location: s.location,
     done: s.done, updatedAt: s.updatedAt, orphaned: videoId === null,
-    originalText: s.originalText ?? null, suggestedLocation: s.suggestedLocation ?? null,
+    originalText: s.originalText ?? null, suggestedLocation: s.suggestedLocation ?? null, tag: s.tag ?? null,
   });
   return {
     videos: doc.videos.map((v): VideoRow => ({
@@ -78,6 +78,7 @@ export function assembleDoc(id: string, name: string, videos: VideoRow[], rows: 
     id: r.id, text: r.text, location: r.location, done: r.done, updatedAt: r.updatedAt,
     ...(r.originalText !== null ? { originalText: r.originalText } : {}),
     ...(r.suggestedLocation !== null ? { suggestedLocation: r.suggestedLocation } : {}),
+    ...(r.tag ? { tag: r.tag as Section['tag'] } : {}),
   });
   const vids: Video[] = sortedVideos.map((v) => ({
     id: v.id, title: v.title, group: v.group, notes: v.notes, originalTitle: v.originalTitle, originalNotes: v.originalNotes,
@@ -98,7 +99,7 @@ export function assembleDoc(id: string, name: string, videos: VideoRow[], rows: 
   };
 }
 
-const FIELDS = ['videoId', 'order', 'text', 'location', 'done', 'orphaned', 'originalText', 'suggestedLocation', 'updatedAt'] as const;
+const FIELDS = ['videoId', 'order', 'text', 'location', 'done', 'orphaned', 'originalText', 'suggestedLocation', 'tag', 'updatedAt'] as const;
 
 export function diffRows(before: SectionRow[], after: SectionRow[]) {
   const old = new Map(before.map((r) => [r.id, r]));

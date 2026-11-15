@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Video } from '../model/types';
 import {
-  acceptSuggestion, dismissSuggestion, mergeWithPrevious, setLocation, setText, setVideoNotes, setVideoTitle, splitSection, toggleDone,
+  acceptSuggestion, cycleTag, dismissSuggestion, mergeWithPrevious, setLocation, setText, setVideoNotes, setVideoTitle, splitSection, toggleDone,
 } from '../model/sections';
 import { carveWordsIntoSection, moveWordsToAdjacentSection } from '../model/wordMoves';
 import { recordLocation } from '../model/recentLocations';
@@ -224,6 +224,7 @@ export function ReaderScreen({
         onToggleDone={(id) => commit(toggleDone(video, id, now()))}
         onOpenLocation={(id, anchor) => setMode({ kind: 'location', id, anchor })}
         onJoin={(id) => commit(mergeWithPrevious(video, id, now()))}
+        onCycleTag={(id) => commit(cycleTag(video, id, now()))}
         onEditTitle={() => setMode({ kind: 'title' })}
         editingTitle={mode.kind === 'title'}
         onSaveTitle={(t) => { commit(setVideoTitle(video, t)); setMode({ kind: 'none' }); }}

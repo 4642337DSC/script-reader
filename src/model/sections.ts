@@ -1,4 +1,4 @@
-import type { ParsedVideo, Section, Video } from './types';
+import type { ParsedVideo, Section, ShotTag, Video } from './types';
 
 const newId = () => crypto.randomUUID();
 
@@ -81,6 +81,17 @@ export function dismissSuggestion(video: Video, sectionId: string, now: number):
   const s = video.sections.find((x) => x.id === sectionId);
   if (!s || !s.suggestedLocation) return video;
   return mapSection(video, sectionId, (x) => ({ ...x, suggestedLocation: '', updatedAt: now }));
+}
+
+export const TAGS: readonly ShotTag[] = ['wide', 'medium', 'closeup', 'voiceover'];
+
+/** none -> wide -> medium -> closeup -> voiceover -> none */
+export function cycleTag(video: Video, sectionId: string, now: number): Video {
+  return mapSection(video, sectionId, (s) => {
+    const { tag, ...rest } = s;
+    const next = TAGS[(tag ? TAGS.indexOf(tag) : -1) + 1];
+    return { ...rest, updatedAt: now, ...(next ? { tag: next } : {}) };
+  });
 }
 
 export function toggleDone(video: Video, sectionId: string, now: number): Video {

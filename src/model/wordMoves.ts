@@ -75,6 +75,7 @@ export function carveWordsIntoSection(
     done: false,
     updatedAt: now,
     ...(src.originalText !== undefined ? { originalText: src.originalText } : {}),
+    ...(src.tag ? { tag: src.tag } : {}),
   };
   const sections = [...video.sections];
   sections[i] = { ...src, text: remaining, updatedAt: now };

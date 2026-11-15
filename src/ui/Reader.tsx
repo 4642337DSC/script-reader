@@ -19,6 +19,7 @@ interface Props {
   onUndo?: () => void;
   onToggleDone: (id: string) => void;
   onOpenLocation: (id: string, anchor: Rect) => void;
+  onCycleTag: (id: string) => void;
   onJoin: (sectionId: string) => void;
   onFontScale: (scale: number) => void;
   onEditTitle?: () => void;
@@ -39,7 +40,7 @@ function Gap({ index, over, joinId, onJoin }: { index: number; over: boolean; jo
 }
 
 export function Reader({
-  video, fontScale, ctl, over, message, canUndo, onUndo, onToggleDone, onOpenLocation, onJoin, onFontScale, onEditTitle, editingTitle, onSaveTitle, onCancelTitle,
+  video, fontScale, ctl, over, message, canUndo, onUndo, onToggleDone, onOpenLocation, onCycleTag, onJoin, onFontScale, onEditTitle, editingTitle, onSaveTitle, onCancelTitle,
   onAcceptSuggestion, onDismissSuggestion, afterHeader,
 }: Props) {
   const clamp = (n: number) => Math.min(MAX_SCALE, Math.max(MIN_SCALE, n));
@@ -70,6 +71,7 @@ export function Reader({
             over={over === `sec:${s.id}`}
             onToggleDone={onToggleDone}
             onOpenLocation={onOpenLocation}
+            onCycleTag={onCycleTag}
             onAcceptSuggestion={onAcceptSuggestion}
             onDismissSuggestion={onDismissSuggestion}
           />

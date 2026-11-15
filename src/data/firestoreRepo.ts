@@ -27,7 +27,7 @@ function toRow(id: string, d: DocumentData): SectionRow | null {
   return {
     id, videoId: d.videoId ?? null, order: d.order, text: d.text, location: d.location ?? null,
     done: !!d.done, updatedAt: d.updatedAt ?? 0, orphaned: !!d.orphaned,
-    originalText: d.originalText ?? null, suggestedLocation: d.suggestedLocation ?? null,
+    originalText: d.originalText ?? null, suggestedLocation: d.suggestedLocation ?? null, tag: d.tag ?? null,
   };
 }
 /** Same ghost rule for video documents. */

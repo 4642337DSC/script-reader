@@ -5,7 +5,7 @@ export interface Client { id: string; name: string; members: string[] }
 export interface SectionRow {
   id: string; videoId: string | null; order: number; text: string;
   location: string | null; done: boolean; updatedAt: number; orphaned: boolean;
-  originalText: string | null; suggestedLocation: string | null;
+  originalText: string | null; suggestedLocation: string | null; tag: string | null;
 }
 export interface VideoRow {
   id: string; title: string; group: string | null; notes: string;

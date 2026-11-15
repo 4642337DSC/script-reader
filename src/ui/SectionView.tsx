@@ -2,6 +2,7 @@ import type { Section } from '../model/types';
 import { wordsOf } from '../model/wordMoves';
 import type { Rect } from './placePopover';
 import { AutoSaveText } from './AutoSaveText';
+import { TAG_INFO } from './tagInfo';
 
 /** Everything the words of a paragraph need from the screen that owns the selection. */
 export interface WordCtl {
@@ -22,6 +23,8 @@ interface Props {
   onToggleDone: (id: string) => void;
   /** The location label above the text: opens the location box. */
   onOpenLocation: (id: string, anchor: Rect) => void;
+  /** The shot tag icon: wide, medium, close-up, voiceover. */
+  onCycleTag: (id: string) => void;
   onAcceptSuggestion?: (id: string) => void;
   onDismissSuggestion?: (id: string) => void;
 }
@@ -34,7 +37,7 @@ function InlineEdit({ initial, onSave, onCancel }: { initial: string; onSave: (t
   );
 }
 
-export function SectionView({ section, ctl, over, onToggleDone, onOpenLocation, onAcceptSuggestion, onDismissSuggestion }: Props) {
+export function SectionView({ section, ctl, over, onToggleDone, onOpenLocation, onCycleTag, onAcceptSuggestion, onDismissSuggestion }: Props) {
   const suggestion = !section.location && section.suggestedLocation ? section.suggestedLocation : null;
   const sel = ctl.selection && ctl.selection.sectionId === section.id ? ctl.selection : null;
   const editing = ctl.editingId === section.id;
@@ -48,12 +51,20 @@ export function SectionView({ section, ctl, over, onToggleDone, onOpenLocation, 
       >{section.done ? '✓' : ''}</button>
       <div class="section-body">
         <div class="section-top">
+          <div class="section-meta">
           <button class={`loc loc-btn${section.location ? '' : ' empty'}`} onClick={(e) => {
             const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
             onOpenLocation(section.id, { left: r.left, top: r.top, width: r.width, height: r.height });
           }}>
             {section.location ? `📍 ${section.location}` : '+ location'}
           </button>
+          <button
+            class={`tag-btn${section.tag ? '' : ' empty'}`}
+            data-tag={section.tag ?? ''}
+            aria-label={`Shot tag: ${section.tag ? TAG_INFO[section.tag].label : 'none'}`}
+            onClick={() => onCycleTag(section.id)}
+          >{section.tag ? <><span>{TAG_INFO[section.tag].icon}</span><span class="tag-name">{TAG_INFO[section.tag].label}</span></> : <span>🏷</span>}</button>
+          </div>
           {!editing && <button class="edit-btn" aria-label="Edit text" onClick={() => ctl.onStartEdit(section.id)}>✎</button>}
         </div>
         {suggestion && (
