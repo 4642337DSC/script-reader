@@ -48,6 +48,9 @@ describe('createGeminiClassifier', () => {
   test.each([
     [new Error('Firebase AI Logic API has not been used in project or it is disabled')],
     [{ status: 403, message: 'PERMISSION_DENIED' }],
+    [new Error('AI: Error fetching from https://firebasevertexai.googleapis.com/v1beta/projects/p/models/m:generateContent: [401 ] Firebase App Check token is invalid.')],
+    [new Error('AI: Error fetching from https://example/m:generateContent: [404 ] models/m is not found for API version v1beta')],
+    [new Error('[400 ] API key not valid. Please pass a valid API key.')],
   ])('a service that is not enabled is reported as disabled', async (err) => {
     const e = await reason(createGeminiClassifier(vi.fn().mockRejectedValue(err))(paragraphs));
     expect(e!.reason).toBe('disabled');

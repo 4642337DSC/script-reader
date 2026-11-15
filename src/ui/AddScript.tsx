@@ -56,9 +56,9 @@ export function AddScript({ repo, clientId, getDriveToken, classify }: Props) {
     const exists = await repo.hasScript(clientId, name);
     try {
       const res = await smartImport(bytes, { classify, scriptExists: exists });
-      finish(name, await repo.addScript(clientId, name, res.videos), res.notice, res.reason ? `${res.reason}${res.detail && res.detail !== res.reason ? ' (' + res.detail.slice(0, 140) + ')' : ''}` : undefined);
+      finish(name, await repo.addScript(clientId, name, res.videos), res.notice, res.reason ? `${res.reason}${res.detail && res.detail !== res.reason ? ' (' + res.detail.slice(0, 400) + ')' : ''}` : undefined);
     } catch (e) {
-      if (e instanceof AiUnavailable) { setUnavailable({ name, bytes, reason: `${e.reason}${e.message && e.message !== e.reason ? ' (' + e.message.slice(0, 140) + ')' : ''}` }); return; }
+      if (e instanceof AiUnavailable) { setUnavailable({ name, bytes, reason: `${e.reason}${e.message && e.message !== e.reason ? ' (' + e.message.slice(0, 400) + ')' : ''}` }); return; }
       throw e;
     }
   };

@@ -20,7 +20,14 @@ function mapError(e: unknown): AiUnavailable {
   const status = statusOf(e);
   const message = e instanceof Error ? e.message : typeof (e as { message?: unknown })?.message === 'string' ? String((e as { message: string }).message) : String(e);
   if (status === 429 || /\b429\b|RESOURCE_EXHAUSTED|quota/i.test(message)) return new AiUnavailable('quota', message);
-  if (status === 403 || /PERMISSION_DENIED|has not been used|is disabled|not enabled|API_KEY|\b403\b/i.test(message)) return new AiUnavailable('disabled', message);
+  // HTTP status as printed in the SDK message, e.g. "[401 ] Firebase App Check token is invalid."
+  const printed = Number(/\[(\d{3})\s*\]/.exec(message)?.[1]);
+  const code = status ?? (printed || undefined);
+  // 400/401/403/404 mean the project setup rejects the call (App Check, API key, model name, API not enabled)
+  if (
+    (code !== undefined && [400, 401, 403, 404].includes(code)) ||
+    /PERMISSION_DENIED|UNAUTHENTICATED|App Check|has not been used|is disabled|not enabled|API key not valid|API_KEY|not found/i.test(message)
+  ) return new AiUnavailable('disabled', message);
   return new AiUnavailable('network', message);
 }
 
