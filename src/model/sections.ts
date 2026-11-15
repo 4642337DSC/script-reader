@@ -59,7 +59,7 @@ export function setLocation(video: Video, sectionId: string, location: string | 
 export function setText(video: Video, sectionId: string, text: string, now: number): Video {
   const t = text.trim();
   if (!t) return video;
-  return mapSection(video, sectionId, (s) => ({ ...s, text: t, updatedAt: now }));
+  return mapSection(video, sectionId, (s) => ({ ...s, text: t, updatedAt: now, originalText: s.originalText ?? s.text }));
 }
 
 export function setVideoTitle(video: Video, title: string): Video {
@@ -80,7 +80,7 @@ export function acceptSuggestion(video: Video, sectionId: string, now: number): 
 export function dismissSuggestion(video: Video, sectionId: string, now: number): Video {
   const s = video.sections.find((x) => x.id === sectionId);
   if (!s || !s.suggestedLocation) return video;
-  return mapSection(video, sectionId, (x) => ({ ...x, suggestedLocation: null, updatedAt: now }));
+  return mapSection(video, sectionId, (x) => ({ ...x, suggestedLocation: '', updatedAt: now }));
 }
 
 export function toggleDone(video: Video, sectionId: string, now: number): Video {

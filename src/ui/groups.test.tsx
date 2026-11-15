@@ -69,7 +69,7 @@ describe('suggested locations', () => {
     fireEvent.click(w.getByLabelText('Dismiss suggested location'));
     await waitFor(() => expect(w.queryByText('📍 tipografie?')).toBeNull());
     await waitFor(() => expect(w.cur().doc.videos[0].sections[0].location).toBeNull());
-    expect(w.cur().doc.videos[0].sections[0].suggestedLocation).toBeUndefined();
+    expect(w.cur().doc.videos[0].sections[0].suggestedLocation).toBe('');
   });
 
   test('tapping a chip button does not open the section menu', async () => {

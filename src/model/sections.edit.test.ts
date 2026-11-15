@@ -47,6 +47,6 @@ describe('editing helpers', () => {
   test('setLocation clears a pending suggestion; dismissSuggestion clears only the suggestion', () => {
     const v = mk();
     expect(setLocation(v, v.sections[0].id, 'Office', 3).sections[0]).toMatchObject({ location: 'Office', suggestedLocation: null });
-    expect(dismissSuggestion(v, v.sections[0].id, 3).sections[0]).toMatchObject({ location: null, suggestedLocation: null, updatedAt: 3 });
+    expect(dismissSuggestion(v, v.sections[0].id, 3).sections[0]).toMatchObject({ location: null, suggestedLocation: '', updatedAt: 3 });
   });
 });

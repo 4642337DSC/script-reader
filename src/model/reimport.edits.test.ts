@@ -37,10 +37,11 @@ describe('reimport keeps user edits', () => {
     expect(reimport(d, [imp('New source title', null, '', 'a')], 9).videos[0].title).toBe('New source title');
   });
 
-  test('edited notes survive unless the source notes changed', () => {
+  test('edited notes survive a re-import; notes never edited follow the source', () => {
     const d = docOf([imp('T', null, 'Cadre: x', 'a')]);
     d.videos[0] = { ...d.videos[0], notes: 'Cadre: x (my edit)' };
     expect(reimport(d, [imp('T', null, 'Cadre: x', 'a')], 9).videos[0].notes).toBe('Cadre: x (my edit)');
+    d.videos[0] = { ...d.videos[0], notes: 'Cadre: x' };
     expect(reimport(d, [imp('T', null, 'Cadre: y', 'a')], 9).videos[0].notes).toBe('Cadre: y');
   });
 

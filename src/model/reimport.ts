@@ -1,4 +1,4 @@
-import { buildVideosFromImport, normalizeImport } from '../import/importModel';
+import { buildVideosFromImport, normalizeImport, stripOuterQuotes } from '../import/importModel';
 import type { ImportedParagraph, ImportedVideo, ParsedVideo, ScriptDoc, Section, Video } from './types';
 
 export const norm = (s: string) =>
@@ -9,16 +9,32 @@ interface Unit { members: number[]; key: string; hasOriginal: boolean }
 
 function buildUnits(old: Section[]): Unit[] {
   const units: Unit[] = [];
-  old.forEach((s, i) => {
-    const last = units[units.length - 1];
-    if (s.originalText !== undefined) {
-      const key = norm(s.originalText);
-      if (last && last.hasOriginal && last.key === key) last.members.push(i);
-      else units.push({ members: [i], key, hasOriginal: true });
-    } else {
+  let i = 0;
+  while (i < old.length) {
+    const s = old[i];
+    if (s.originalText === undefined) {
       units.push({ members: [i], key: norm(s.text), hasOriginal: false });
+      i++;
+      continue;
     }
-  });
+    const key = norm(s.originalText);
+    const keyStripped = norm(stripOuterQuotes(s.originalText));
+    // Following sections with the same source belong to this unit only while they are pieces of a user split,
+    // i.e. their texts joined rebuild the source paragraph. Two identical source paragraphs stay two units.
+    let acc = norm(s.text);
+    let j = i;
+    while (
+      acc !== key && acc !== keyStripped && j + 1 < old.length &&
+      old[j + 1].originalText !== undefined && norm(old[j + 1].originalText!) === key
+    ) {
+      j++;
+      acc += ' ' + norm(old[j].text);
+    }
+    const whole = acc === key || acc === keyStripped;
+    if (!whole) j = i;
+    units.push({ members: Array.from({ length: j - i + 1 }, (_, k) => i + k), key, hasOriginal: true });
+    i = j + 1;
+  }
   return units;
 }
 
@@ -106,11 +122,12 @@ export function reimport(old: ScriptDoc, input: ImportedVideo[] | ParsedVideo[],
     const titleChanged = norm(p.title) !== srcTitle;
     const srcNotes = norm(match.originalNotes ?? '');
     const notesChanged = norm(p.notes) !== srcNotes;
+    const userEditedNotes = norm(match.notes ?? '') !== norm(match.originalNotes ?? '');
     videos.push({
       id: match.id,
       title: titleChanged ? p.title : match.title,
       originalTitle: titleChanged ? p.title : match.originalTitle ?? p.title,
-      notes: notesChanged ? p.notes : match.notes ?? '',
+      notes: userEditedNotes ? match.notes ?? '' : notesChanged ? p.notes : match.notes ?? '',
       originalNotes: notesChanged ? p.notes : match.originalNotes ?? '',
       group: p.group,
       sections,

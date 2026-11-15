@@ -77,7 +77,7 @@ export function assembleDoc(id: string, name: string, videos: VideoRow[], rows: 
   const toSection = (r: SectionRow): Section => ({
     id: r.id, text: r.text, location: r.location, done: r.done, updatedAt: r.updatedAt,
     ...(r.originalText !== null ? { originalText: r.originalText } : {}),
-    ...(r.suggestedLocation ? { suggestedLocation: r.suggestedLocation } : {}),
+    ...(r.suggestedLocation !== null ? { suggestedLocation: r.suggestedLocation } : {}),
   });
   const vids: Video[] = sortedVideos.map((v) => ({
     id: v.id, title: v.title, group: v.group, notes: v.notes, originalTitle: v.originalTitle, originalNotes: v.originalNotes,
