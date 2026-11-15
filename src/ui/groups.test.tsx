@@ -84,7 +84,7 @@ describe('suggested locations', () => {
     await w.findByText('📍 tipografie?');
     fireEvent.click(w.container.querySelectorAll('.loc-btn')[0]);
     fireEvent.input(w.getByPlaceholderText('Location'), { target: { value: 'Office' } });
-    fireEvent.click(w.getByText('Save'));
+    fireEvent.click(w.container.querySelector('.loc-backdrop')!);
     expect(await w.findByText('📍 Office')).toBeTruthy();
     expect(w.queryByText('📍 tipografie?')).toBeNull();
   });

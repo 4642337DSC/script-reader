@@ -26,12 +26,12 @@ describe('LocationSheet', () => {
     fireEvent.click(getByText('Kitchen'));
     expect(onPick).toHaveBeenCalledWith('Kitchen');
   });
-  test('typed text can be submitted and clear picks null', () => {
+  test('typed text is submitted with Enter and Clear picks null', () => {
     const onPick = vi.fn();
     const { getByPlaceholderText, getByText } = render(
       <LocationSheet recents={[]} current="Old" onPick={onPick} onClose={() => {}} />);
     fireEvent.input(getByPlaceholderText('Location'), { target: { value: 'Garage' } });
-    fireEvent.click(getByText('Save'));
+    fireEvent.keyDown(getByPlaceholderText('Location'), { key: 'Enter' });
     expect(onPick).toHaveBeenLastCalledWith('Garage');
     fireEvent.click(getByText('Clear'));
     expect(onPick).toHaveBeenLastCalledWith(null);

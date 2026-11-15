@@ -25,9 +25,16 @@ export function LocationSheet({ recents, current, anchor = DEFAULT_ANCHOR, onPic
     if (el) setPos(placePopover(anchor, { width: el.offsetWidth, height: el.offsetHeight }, viewport()));
   }, [anchor.left, anchor.top, anchor.width, anchor.height, chips.length]);
 
+  // Closing the popup is saving: tapping outside keeps what was typed (an empty or unchanged box changes nothing).
+  const closeAndSave = () => {
+    const t = text.trim();
+    if (t && t !== (current ?? '')) onPick(t);
+    else onClose();
+  };
+
   return (
     <>
-      <div class="loc-backdrop" onClick={onClose} />
+      <div class="loc-backdrop" onClick={closeAndSave} />
       <div
         class="loc-pop"
         ref={ref}
@@ -40,9 +47,9 @@ export function LocationSheet({ recents, current, anchor = DEFAULT_ANCHOR, onPic
             value={text}
             autoFocus
             onInput={(e) => setText((e.target as HTMLInputElement).value)}
-            onKeyDown={(e) => { if (e.key === 'Enter' && text.trim()) onPick(text.trim()); }}
+            onKeyDown={(e) => { if (e.key === 'Enter') closeAndSave(); }}
           />
-          <button class="chip" disabled={!text.trim()} onClick={() => onPick(text.trim())}>Save</button>
+          <button class="chip" onClick={() => onPick(null)}>Clear</button>
         </div>
         {chips.length > 0 && (
           <div class="chips">
@@ -51,10 +58,6 @@ export function LocationSheet({ recents, current, anchor = DEFAULT_ANCHOR, onPic
             ))}
           </div>
         )}
-        <div class="pop-row pop-small">
-          <button class="chip" onClick={() => onPick(null)}>Clear</button>
-          <button class="chip" onClick={onClose}>Cancel</button>
-        </div>
       </div>
     </>
   );

@@ -56,7 +56,7 @@ describe('reader wiring', () => {
     const w = await open();
     fireEvent.click(w.container.querySelectorAll('.loc-btn')[0]);
     fireEvent.input(w.getByPlaceholderText('Location'), { target: { value: 'Office' } });
-    fireEvent.click(w.getByText('Save'));
+    fireEvent.click(w.container.querySelector('.loc-backdrop')!);
     await waitFor(() => expect(w.cur().doc.videos[0].sections[0].location).toBe('Office'));
     let list: string[] = [];
     w.bob.watchRecents(w.c1, (l) => { list = l; })();
