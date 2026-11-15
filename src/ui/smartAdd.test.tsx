@@ -61,6 +61,7 @@ describe('smart add', () => {
     w.pick(await standard('Batch.docx', 'Say this.'));
     expect(await w.findByText('Added Batch.docx')).toBeTruthy();
     expect(w.getByText('AI reading unavailable, used the basic reading.')).toBeTruthy();
+    expect(w.getByText(/AI problem: quota/)).toBeTruthy();
     expect(w.dataOf('Batch.docx')!.doc.videos.length).toBeGreaterThan(0);
   });
 
@@ -72,6 +73,7 @@ describe('smart add', () => {
     const before = JSON.stringify(w.dataOf('Batch.docx'));
     w.pick(await standard('Batch.docx', 'Say this, changed.'));
     expect(await w.findByText('The AI reading is unavailable right now.')).toBeTruthy();
+    expect(w.getByText(/Reason: network/)).toBeTruthy();
     expect(JSON.stringify(w.dataOf('Batch.docx'))).toBe(before);
     fireEvent.click(w.getByText('Try again later'));
     expect(w.queryByText('The AI reading is unavailable right now.')).toBeNull();

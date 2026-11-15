@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { buildVideosFromImport, normalizeImport, stripOuterQuotes } from './importModel';
+import { buildVideosFromImport, normalizeImport, stripOuterQuotes, stripSpokenQuotes } from './importModel';
 import type { ImportedVideo, ParsedVideo } from '../model/types';
 
 describe('stripOuterQuotes', () => {
@@ -16,6 +16,24 @@ describe('stripOuterQuotes', () => {
     expect(stripOuterQuotes('„doar început')).toBe('„doar început');
     expect(stripOuterQuotes('fără ghilimele')).toBe('fără ghilimele');
     expect(stripOuterQuotes('a „citat” în mijloc')).toBe('a „citat” în mijloc');
+  });
+});
+
+describe('stripSpokenQuotes (a quote can open in one paragraph and close in a later one)', () => {
+  test.each([
+    ['„Salut, lume.”', 'Salut, lume.'],
+    ['„Doar început, fără închidere.', 'Doar început, fără închidere.'],
+    ['Doar final, fără deschidere.”', 'Doar final, fără deschidere.'],
+    ['„«Îmi trebuie formularul» Așa încep întrebările.”', '«Îmi trebuie formularul» Așa încep întrebările.'],
+  ])('%s -> %s', (input, out) => {
+    expect(stripSpokenQuotes(input)).toBe(out);
+  });
+
+  test('quotes in the middle, or a quote that closes inside the text, are left alone', () => {
+    expect(stripSpokenQuotes('a „citat” în mijloc')).toBe('a „citat” în mijloc');
+    expect(stripSpokenQuotes('„A” apoi text')).toBe('„A” apoi text');
+    expect(stripSpokenQuotes('text apoi „B”')).toBe('text apoi „B”');
+    expect(stripSpokenQuotes('fără ghilimele')).toBe('fără ghilimele');
   });
 });
 

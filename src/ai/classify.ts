@@ -1,4 +1,4 @@
-import { stripOuterQuotes } from '../import/importModel';
+import { stripOuterQuotes, stripSpokenQuotes } from '../import/importModel';
 import type { ImportedVideo } from '../model/types';
 
 export interface SourceParagraph { index: number; text: string; style: string; bold: boolean }
@@ -62,18 +62,21 @@ const wordCount = (s: string) => s.trim().split(/\s+/).filter(Boolean).length;
 const SHORT_LINE = (s: string) => s.trim().length <= 80 && wordCount(s) <= 10 && !startsWithQuote(s);
 const FURNITURE = /^[\d\s.\-–—|•*_=)(:]+$/;
 
+/** What follows a cue: a dash or colon separator is not part of the spoken text. */
+const afterCue = (text: string, cue: string) => text.trimStart().slice(cue.length).trim().replace(/^[-–—:]\s*/, '');
+
 /**
  * A glued filming cue is only accepted when it is clearly a short phrase at the very start of the paragraph:
- * at most 60 characters and 8 words, no digits or sentence punctuation, ending at a word boundary, and the rest
- * must begin like a new sentence. Anything else would cut spoken words off, so the cue is dropped.
+ * at most 80 characters and 12 words, no digits or sentence punctuation, ending at a word boundary, and the rest
+ * (after an optional dash) must begin like a new sentence. Anything else would cut spoken words off, so the cue
+ * is dropped.
  */
 export function validCue(paragraph: string, cue: string): boolean {
   const text = paragraph.trimStart();
   if (!cue || !text.startsWith(cue)) return false;
-  if (cue.length > 60 || wordCount(cue) > 8 || startsWithQuote(cue) || /[\d.!?;:]/.test(cue)) return false;
-  const next = text.charAt(cue.length);
-  if (!/\s/.test(next)) return false;
-  const remainder = text.slice(cue.length).trim();
+  if (cue.length > 80 || wordCount(cue) > 12 || startsWithQuote(cue) || /[\d.!?;:]/.test(cue)) return false;
+  if (!/\s/.test(text.charAt(cue.length))) return false;
+  const remainder = afterCue(text, cue);
   return remainder.length >= 3 && /^[\p{Lu}\p{N}„"“«]/u.test(remainder);
 }
 
@@ -116,7 +119,7 @@ export function validateLabels(raw: unknown, paragraphs: SourceParagraph[]): AiL
   return paragraphs.map((_, i) => byIndex.get(i) ?? { i, label: 'spoken' as const });
 }
 
-const cleanCue = (cue: string) => cue.replace(/^\s*filmare\s+/i, '').trim();
+const cleanCue = (cue: string) => cue.replace(/^\s*filmare\s+/i, '').replace(/\s*[-–—:]\s*$/, '').trim();
 const numberOnly = /^[\d\s.\-–—)(:]+$/;
 
 /** Builds the videos from labels. Every piece of text comes from the source paragraphs. */
@@ -172,11 +175,11 @@ export function assembleImport(paragraphs: SourceParagraph[], labels: AiLabel[])
         const v = ensureVideo();
         if (l.cue && validCue(text, l.cue)) {
           addNote(v, l.cue);
-          const remainder = text.replace(/^\s+/, '').slice(l.cue.length).trim();
-          v.paragraphs.push({ source: text, text: stripOuterQuotes(remainder), suggestedLocation: cleanCue(l.cue) || null });
+          const remainder = afterCue(text, l.cue);
+          v.paragraphs.push({ source: text, text: stripSpokenQuotes(remainder), suggestedLocation: cleanCue(l.cue) || null });
           standaloneCue = null;
         } else {
-          v.paragraphs.push({ source: text, text: stripOuterQuotes(text), suggestedLocation: standaloneCue });
+          v.paragraphs.push({ source: text, text: stripSpokenQuotes(text), suggestedLocation: standaloneCue });
         }
         break;
       }

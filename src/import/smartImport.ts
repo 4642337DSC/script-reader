@@ -1,9 +1,9 @@
 import { parseDocx, readDocxParagraphs } from '../docx/parseDocx';
-import { AiUnavailable, assembleImport, type Classifier } from '../ai/classify';
+import { AiUnavailable, assembleImport, type AiUnavailableReason, type Classifier } from '../ai/classify';
 import { normalizeImport } from './importModel';
 import type { ImportedVideo } from '../model/types';
 
-export interface SmartImportResult { videos: ImportedVideo[]; mode: 'ai' | 'basic'; notice?: string }
+export interface SmartImportResult { videos: ImportedVideo[]; mode: 'ai' | 'basic'; notice?: string; reason?: AiUnavailableReason; detail?: string }
 export interface SmartImportDeps { classify?: Classifier; scriptExists: boolean }
 
 export const BASIC_NOTICE = 'AI reading unavailable, used the basic reading.';
@@ -30,6 +30,6 @@ export async function smartImport(bytes: ArrayBuffer, deps: SmartImportDeps): Pr
   } catch (e) {
     const err = e instanceof AiUnavailable ? e : new AiUnavailable('network', e instanceof Error ? e.message : String(e));
     if (deps.scriptExists) throw err;
-    return { videos: await basicImport(bytes), mode: 'basic', notice: BASIC_NOTICE };
+    return { videos: await basicImport(bytes), mode: 'basic', notice: BASIC_NOTICE, reason: err.reason, detail: err.message };
   }
 }

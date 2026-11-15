@@ -33,6 +33,7 @@ describe('smartImport', () => {
       const r = await smartImport(await doc(), { classify, scriptExists: false });
       expect(r.mode).toBe('basic');
       expect(r.notice).toBe('AI reading unavailable, used the basic reading.');
+      expect(r.reason).toBe(reason);
       expect(r.videos.length).toBeGreaterThan(0);
       expect(r.videos.flatMap((v) => v.paragraphs.map((p) => p.text))).toContain('„Say this out loud.”');
     },

@@ -47,10 +47,10 @@ describe('assembleImport on the fixture', () => {
       [paragraphs[21].text, paragraphs[22].text, paragraphs[23].text, 'Filmare tipografie', 'Filmare pvc'].join('\n\n'),
     );
     expect(film.paragraphs.map((p) => [p.text, p.suggestedLocation ?? null])).toEqual([
-      ['„In the beginning the story started with a stationery shop, with things people needed every day.', 'SHOP EXAMPLE'],
+      ['In the beginning the story started with a stationery shop, with things people needed every day.', 'SHOP EXAMPLE'],
       ["We opened the print shop. We put clients' ideas on paper.", 'tipografie'],
       ['We moved into window making.', 'pvc'],
-      ['Today we are older and wiser. Thank you all.”', null],
+      ['Today we are older and wiser. Thank you all.', null],
     ]);
     expect(film.paragraphs[1].source).toBe(paragraphs[25].text);
   });
@@ -121,10 +121,22 @@ describe('validateLabels', () => {
     ['a cue that swallows spoken words (digits)', 'Filmare tipografie În 1994 am', 'Filmare tipografie În 1994 am deschis tipografia.'],
     ['a cue followed by lowercase text (not a new sentence)', 'Filmare tipografie în', 'Filmare tipografie în noul an am deschis.'],
     ['a cue with sentence punctuation', 'Filmare tipografie.', 'Filmare tipografie. Apoi am început.'],
-    ['a very long cue', 'x'.repeat(61), 'x'.repeat(61) + ' Urmează textul.'],
+    ['a very long cue', 'x'.repeat(81), 'x'.repeat(81) + ' Urmează textul.'],
   ])('%s is dropped', (_name, cue, text) => {
     const ps = [{ index: 0, text, style: '', bold: false }, { index: 1, text: 'altceva', style: '', bold: false }];
     expect(validateLabels([{ i: 0, label: 'spoken', cue }, { i: 1, label: 'spoken' }], ps)![0].cue).toBeUndefined();
+  });
+
+  test('a long cue ending in a dash is accepted, and the dash does not show in the text', () => {
+    const text = 'Drona si cand se ridica se vede plantil fotovoltaic - Investim, creștem și revenim aici.';
+    const ps = [{ index: 0, text, style: '', bold: false }];
+    for (const cue of ['Drona si cand se ridica se vede plantil fotovoltaic -', 'Drona si cand se ridica se vede plantil fotovoltaic']) {
+      const labels = validateLabels([{ i: 0, label: 'spoken', cue }], ps)!;
+      expect(labels[0].cue).toBe(cue);
+      const [v] = assembleImport(ps, labels);
+      expect(v.paragraphs[0].text).toBe('Investim, creștem și revenim aici.');
+      expect(v.paragraphs[0].suggestedLocation).toBe(cue.replace(/ -$/, ''));
+    }
   });
 
   test('a sensible cue at a word boundary followed by a new sentence is kept', () => {

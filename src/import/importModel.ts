@@ -13,6 +13,20 @@ export function stripOuterQuotes(s: string): string {
   return t;
 }
 
+/**
+ * Quote handling for spoken text. A Romanian quotation can open („) in one paragraph and close (”) in a later one,
+ * so besides a matching outer pair this also removes an opening „ that never closes inside the paragraph, and a
+ * closing ” that never opened inside it. Quotes in the middle of the text are left alone.
+ */
+export function stripSpokenQuotes(s: string): string {
+  const t = s.trim();
+  const pair = stripOuterQuotes(t);
+  if (pair !== t) return pair;
+  if (t.startsWith('„') && !t.includes('”') && !t.includes('“')) return t.slice(1).trim();
+  if (t.endsWith('”') && !t.includes('„')) return t.slice(0, -1).trim();
+  return t;
+}
+
 export function normalizeImport(input: ParsedVideo[] | ImportedVideo[]): ImportedVideo[] {
   // ImportedVideo always carries `notes`; ParsedVideo never does.
   if ((input as ImportedVideo[]).every((v) => 'notes' in v)) return input as ImportedVideo[];

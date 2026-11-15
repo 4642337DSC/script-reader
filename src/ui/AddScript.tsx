@@ -24,15 +24,16 @@ export function AddScript({ repo, clientId, getDriveToken, classify }: Props) {
   const [linkMode, setLinkMode] = useState(false);
   const [link, setLink] = useState('');
   const [busy, setBusy] = useState(false);
-  const [unavailable, setUnavailable] = useState<{ name: string; bytes: ArrayBuffer } | null>(null);
+  const [unavailable, setUnavailable] = useState<{ name: string; bytes: ArrayBuffer; reason: string } | null>(null);
   const [aiSeen, setAiSeen] = useState(() => localStorage.getItem('aiNoticeSeen') === '1');
 
-  const finish = (name: string, r: { reimported: boolean; orphanedCount: number }, notice?: string) => {
+  const finish = (name: string, r: { reimported: boolean; orphanedCount: number }, notice?: string, why?: string) => {
     setStatus(r.reimported ? `Updated ${name} (kept your locations, ticks and edits)` : `Added ${name}`);
     const n = r.orphanedCount;
     setNotes([
       ...(n > 0 ? [`${n} ${n === 1 ? 'paragraph' : 'paragraphs'} moved to "no longer in script"`] : []),
       ...(notice ? [notice] : []),
+      ...(why ? [`AI problem: ${why}`] : []),
     ]);
   };
 
@@ -55,9 +56,9 @@ export function AddScript({ repo, clientId, getDriveToken, classify }: Props) {
     const exists = await repo.hasScript(clientId, name);
     try {
       const res = await smartImport(bytes, { classify, scriptExists: exists });
-      finish(name, await repo.addScript(clientId, name, res.videos), res.notice);
+      finish(name, await repo.addScript(clientId, name, res.videos), res.notice, res.reason ? `${res.reason}${res.detail && res.detail !== res.reason ? ' (' + res.detail.slice(0, 140) + ')' : ''}` : undefined);
     } catch (e) {
-      if (e instanceof AiUnavailable) { setUnavailable({ name, bytes }); return; }
+      if (e instanceof AiUnavailable) { setUnavailable({ name, bytes, reason: `${e.reason}${e.message && e.message !== e.reason ? ' (' + e.message.slice(0, 140) + ')' : ''}` }); return; }
       throw e;
     }
   };
@@ -135,6 +136,7 @@ export function AddScript({ repo, clientId, getDriveToken, classify }: Props) {
   const dialog = unavailable ? (
     <div class="toast" role="alert">
       <span>The AI reading is unavailable right now.</span>
+      <small>{`Reason: ${unavailable.reason}`}</small>
       <button onClick={() => void importBasicAnyway()}>Import with basic reading anyway</button>
       <button onClick={() => setUnavailable(null)}>Try again later</button>
     </div>
