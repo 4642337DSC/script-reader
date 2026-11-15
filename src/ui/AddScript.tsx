@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks';
+import { useRef, useState } from 'preact/hooks';
 import { readFileBytes } from '../docx/readFile';
 import { fetchGoogleDoc, GDocError, parseDocLink } from '../gdocs/gdocs';
 import { AiUnavailable, type Classifier } from '../ai/classify';
@@ -15,7 +15,7 @@ interface Props {
 }
 
 const FILE_ACCEPT = '.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-const AI_NOTICE = "Importing sends the document text to Google's Gemini service to read its structure.";
+const AI_NOTICE = "Importing sends the document text to Google's Gemini service to read its structure. As we understand Google's terms, content sent on the free tier may be used by Google to improve its products.";
 
 export function AddScript({ repo, clientId, getDriveToken, classify }: Props) {
   const [status, setStatus] = useState('');
@@ -36,9 +36,18 @@ export function AddScript({ repo, clientId, getDriveToken, classify }: Props) {
     ]);
   };
 
+  // One import at a time: a second tap while Gemini is still reading would otherwise create the script twice.
+  const running = useRef(false);
+  const exclusive = async (fn: () => Promise<void>) => {
+    if (running.current) { setStatus('Another import is still running.'); return; }
+    running.current = true;
+    try { await fn(); } finally { running.current = false; }
+  };
+
   const importBytes = async (name: string, bytes: ArrayBuffer) => {
     setUnavailable(null);
     setNotes([]);
+    setStatus(`Reading ${name}…`);
     if (!classify) {
       finish(name, await repo.addScript(clientId, name, await basicImport(bytes)));
       return;
@@ -57,11 +66,13 @@ export function AddScript({ repo, clientId, getDriveToken, classify }: Props) {
     if (!unavailable) return;
     const { name, bytes } = unavailable;
     setUnavailable(null);
-    try {
-      finish(name, await repo.addScript(clientId, name, await basicImport(bytes)));
-    } catch {
-      setStatus(`Couldn't read ${name}`);
-    }
+    await exclusive(async () => {
+      try {
+        finish(name, await repo.addScript(clientId, name, await basicImport(bytes)));
+      } catch {
+        setStatus(`Couldn't read ${name}`);
+      }
+    });
   };
 
   const onPick = async (e: Event) => {
@@ -70,17 +81,23 @@ export function AddScript({ repo, clientId, getDriveToken, classify }: Props) {
     input.value = '';
     if (!file) return;
     setOpen(false);
-    try {
-      await importBytes(file.name, await readFileBytes(file));
-    } catch {
-      setStatus(`Couldn't read ${file.name}`);
-      setNotes([]);
-    }
+    await exclusive(async () => {
+      try {
+        await importBytes(file.name, await readFileBytes(file));
+      } catch {
+        setStatus(`Couldn't read ${file.name}`);
+        setNotes([]);
+      }
+    });
   };
 
   const importLink = async () => {
     const id = parseDocLink(link);
     if (!id) { setStatus("That doesn't look like a Google Docs link."); return; }
+    await exclusive(() => importLinkNow(id));
+  };
+
+  const importLinkNow = async (id: string) => {
     setBusy(true);
     try {
       let token: string;

@@ -100,15 +100,28 @@ describe('smart add', () => {
     expect(w.queryByText('The AI reading is unavailable right now.')).toBeNull();
   });
 
+  test('a second pick while an import is still running is ignored, so no duplicate script appears', async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const slow: Classifier = async (ps) => { await gate; return smartClassify(ps); };
+    const w = await setup(slow);
+    w.pick(await standard('Batch.docx', 'Say this.'));
+    w.pick(await standard('Batch.docx', 'Say this.'));
+    expect(await w.findByText('Another import is still running.')).toBeTruthy();
+    release();
+    expect(await w.findByText('Added Batch.docx')).toBeTruthy();
+    await waitFor(() => expect(w.container.querySelectorAll('.script-row').length).toBe(1));
+  });
+
   test('the one-time notice about sending text to Gemini shows once', async () => {
     const w = await setup(smartClassify);
-    expect(w.getByText("Importing sends the document text to Google's Gemini service to read its structure.")).toBeTruthy();
+    expect(w.getByText("Importing sends the document text to Google's Gemini service to read its structure. As we understand Google's terms, content sent on the free tier may be used by Google to improve its products.")).toBeTruthy();
     fireEvent.click(w.getByText('OK'));
-    expect(w.queryByText("Importing sends the document text to Google's Gemini service to read its structure.")).toBeNull();
+    expect(w.queryByText("Importing sends the document text to Google's Gemini service to read its structure. As we understand Google's terms, content sent on the free tier may be used by Google to improve its products.")).toBeNull();
     expect(localStorage.getItem('aiNoticeSeen')).toBe('1');
     w.unmount();
     location.hash = '';
     const again = await setup(smartClassify);
-    expect(again.queryByText("Importing sends the document text to Google's Gemini service to read its structure.")).toBeNull();
+    expect(again.queryByText("Importing sends the document text to Google's Gemini service to read its structure. As we understand Google's terms, content sent on the free tier may be used by Google to improve its products.")).toBeNull();
   });
 });
