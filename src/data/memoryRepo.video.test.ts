@@ -43,3 +43,13 @@ describe('MemoryRepo video fields', () => {
     expect(seen.originalTitle).toBe('First');
   });
 });
+
+describe('MemoryRepo import helpers', () => {
+  test('hasScript and orphanedCount', async () => {
+    const w = await world();
+    expect(await w.anna.hasScript(w.c1, 's.docx')).toBe(true);
+    expect(await w.anna.hasScript(w.c1, 'nope.docx')).toBe(false);
+    const r = await w.anna.addScript(w.c1, 's.docx', [{ title: 'First', paragraphs: ['a'] }, { title: 'Second', paragraphs: ['c'] }]);
+    expect(r).toMatchObject({ reimported: true, orphanedCount: 1 });
+  });
+});
