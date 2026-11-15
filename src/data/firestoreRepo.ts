@@ -35,7 +35,10 @@ export function createFirestoreRepo(db: Firestore, user: AuthUser): Repo {
   let pending = 0;
   const syncListeners = new Set<(s: SyncState) => void>();
   const isOnline = () => typeof navigator === 'undefined' || (navigator as Navigator).onLine !== false;
-  const emitSync = () => syncListeners.forEach((l) => l({ online: isOnline(), pending: pending > 0 }));
+  // Writes queued earlier (before a reload, or by another tab) are only visible through snapshot metadata.
+  const snapPending = new Map<string, boolean>();
+  const anyPending = () => pending > 0 || [...snapPending.values()].some(Boolean);
+  const emitSync = () => syncListeners.forEach((l) => l({ online: isOnline(), pending: anyPending() }));
   if (typeof addEventListener === 'function') {
     addEventListener('online', emitSync);
     addEventListener('offline', emitSync);
@@ -68,20 +71,32 @@ export function createFirestoreRepo(db: Firestore, user: AuthUser): Repo {
     const flat = flattenDoc(after, orders);
     const d = diffRows(beforeRows, flat.rows);
     const total = d.sets.length + d.updates.length + d.deletes.length;
-    if (!total) return {};
+    const videosChanged = JSON.stringify(before.doc.videos.map((v) => [v.id, v.title])) !== JSON.stringify(flat.videos.map((v) => [v.id, v.title]));
+    if (!total && !videosChanged) return {};
     const ops: ((b: WriteBatch) => void)[] = [
       ...d.sets.map((r) => (b: WriteBatch) => b.set(doc(sectionsCol(c, s), r.id), withoutId(r))),
       // merge-set, not update: if the section was deleted meanwhile this must not fail the whole batch
       ...d.updates.map((u) => (b: WriteBatch) => b.set(doc(sectionsCol(c, s), u.id), u.patch, { merge: true })),
       ...d.deletes.map((id) => (b: WriteBatch) => b.delete(doc(sectionsCol(c, s), id))),
     ];
-    const videosChanged = JSON.stringify(before.doc.videos.map((v) => [v.id, v.title])) !== JSON.stringify(flat.videos.map((v) => [v.id, v.title]));
-    ops.push((b) => b.set(doc(scriptsCol(c), s), videosChanged ? { videos: flat.videos, updatedAt: Date.now() } : { updatedAt: Date.now() }, { merge: true }));
+    const scriptRef = doc(scriptsCol(c), s);
+    // Every batch carries an update() of the script doc: update fails if the script was deleted meanwhile,
+    // so a stale save can neither resurrect the script nor leave ghost sections behind it.
+    const run = async () => {
+      const groups = ops.length ? chunk(ops, BATCH - 1) : [[]];
+      for (let i = 0; i < groups.length; i++) {
+        const b = writeBatch(db);
+        groups[i].forEach((op) => op(b));
+        b.update(scriptRef, i === 0 && videosChanged ? { videos: flat.videos, updatedAt: Date.now() } : { updatedAt: Date.now() });
+        await b.commit();
+      }
+    };
     try {
-      await track(commitOps(c, s, ops));
+      await track(run());
       return {};
     } catch (e) {
-      if (toError(e).code === 'permission-denied') return { droppedOnReject: total };
+      const code = toError(e).code;
+      if (code === 'permission-denied' || code === 'not-found') return { droppedOnReject: total || 1 };
       throw e;
     }
   }
@@ -122,13 +137,38 @@ export function createFirestoreRepo(db: Firestore, user: AuthUser): Repo {
         if (meta === undefined || rows === undefined) return;
         cb(meta === null ? null : assembleDoc(scriptId, meta.name ?? '', meta.videos ?? [], rows));
       };
-      const u1 = onSnapshot(doc(scriptsCol(clientId), scriptId), (s) => { meta = s.exists() ? s.data() : null; emit(); }, (e) => onError(toError(e)));
-      const u2 = onSnapshot(
-        sectionsCol(clientId, scriptId),
-        (snap) => { rows = snap.docs.map((d) => toRow(d.id, d.data())).filter((r): r is SectionRow => !!r); emit(); },
+      const key = `${clientId}/${scriptId}/${Math.random()}`;
+      let metaPending = false;
+      let rowsPending = false;
+      const markPending = () => { snapPending.set(key, metaPending || rowsPending); emitSync(); };
+      // includeMetadataChanges so the pending flag clears when the server acknowledges a write;
+      // data is only re-emitted to the UI when it actually changed.
+      const u1 = onSnapshot(
+        doc(scriptsCol(clientId), scriptId),
+        { includeMetadataChanges: true },
+        (s) => {
+          const next = s.exists() ? s.data() : null;
+          const changed = meta === undefined || JSON.stringify(next) !== JSON.stringify(meta);
+          meta = next;
+          metaPending = s.metadata.hasPendingWrites;
+          markPending();
+          if (changed) emit();
+        },
         (e) => onError(toError(e)),
       );
-      return () => { u1(); u2(); };
+      const u2 = onSnapshot(
+        sectionsCol(clientId, scriptId),
+        { includeMetadataChanges: true },
+        (snap) => {
+          const first = rows === undefined;
+          rows = snap.docs.map((d) => toRow(d.id, d.data())).filter((r): r is SectionRow => !!r);
+          rowsPending = snap.metadata.hasPendingWrites;
+          markPending();
+          if (first || snap.docChanges().length > 0) emit();
+        },
+        (e) => onError(toError(e)),
+      );
+      return () => { u1(); u2(); snapPending.delete(key); emitSync(); };
     },
 
     watchRecents(clientId, cb) {
@@ -137,7 +177,7 @@ export function createFirestoreRepo(db: Firestore, user: AuthUser): Repo {
 
     watchSyncState(cb) {
       syncListeners.add(cb);
-      cb({ online: isOnline(), pending: pending > 0 });
+      cb({ online: isOnline(), pending: anyPending() });
       return () => syncListeners.delete(cb);
     },
 
