@@ -29,7 +29,8 @@ describe('shot tag icon on each card', () => {
     expect(r.tagBtn(1).getAttribute('aria-label')).toBe('Shot tag: Close-up');
     expect(r.tagBtn(1).querySelector('svg[data-icon="closeup"]')).toBeTruthy();
     expect(r.tagBtn(0).querySelector('svg[data-icon="none"]')).toBeTruthy();
-    expect(r.tagBtn(1).textContent?.trim()).toBe('');
+    expect(r.tagBtn(1).textContent?.trim()).toBe('C');
+    expect(r.tagBtn(0).textContent?.trim()).toBe('');
     expect(r.tagBtn(1).getAttribute('title')).toBe('Close-up');
     expect(r.tagBtn(1).getAttribute('data-tag')).toBe('closeup');
   });
@@ -94,3 +95,4 @@ describe('shot tag icon on each card', () => {
     expect(r.last().sections[0].tag).toBeUndefined();
   });
 });
+

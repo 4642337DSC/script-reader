@@ -65,7 +65,7 @@ export function SectionView({ section, ctl, over, onToggleDone, onOpenLocation, 
             aria-label={`Shot tag: ${section.tag ? TAG_INFO[section.tag].label : 'none'}`}
             title={section.tag ? TAG_INFO[section.tag].label : 'Shot tag'}
             onClick={() => onCycleTag(section.id)}
-          ><TagIcon tag={section.tag} /></button>
+          ><span class="tag-letter" aria-hidden="true">{section.tag ? TAG_INFO[section.tag].label[0] : ''}</span><TagIcon tag={section.tag} /></button>
           </div>
           {!editing && <button class="edit-btn" aria-label="Edit text" onClick={() => ctl.onStartEdit(section.id)}>✎</button>}
         </div>
