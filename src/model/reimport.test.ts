@@ -14,7 +14,9 @@ describe('reimport', () => {
     v = toggleDone(v, v.sections[1].id, 3);
     d = { ...d, videos: [v] };
     const r = reimport(d, [{ title: 'T', paragraphs: ['one', 'two'] }], 9);
-    expect(r.videos[0].sections).toEqual(v.sections);
+    // matched sections now also remember their source paragraph (originalText); everything else is unchanged
+    expect(r.videos[0].sections).toMatchObject(v.sections.map((s) => ({ ...s })));
+    expect(r.videos[0].sections.map((s) => s.originalText)).toEqual(['one', 'two']);
     expect(r.videos[0].id).toBe(v.id);
     expect(r.orphans).toEqual([]);
   });
