@@ -26,14 +26,14 @@ export function TagIcon({ tag, size = 24 }: { tag?: ShotTag; size?: number }) {
       aria-hidden="true"
     >
       {tag === 'voiceover' ? (
-        <g transform={`translate(${(W - 24) / 2} 0)`}>
+        <g transform={`translate(-5 0)`}>
           <rect x="9.5" y="3" width="5" height="10" rx="2.5" />
           <path d="M6.5 11a5.5 5.5 0 0 0 11 0" />
           <path d="M12 16.5V20.5M9 20.5h6" />
         </g>
       ) : tag ? (
         <rect
-          x={(W - RECT_WIDTH[tag]) / 2}
+          x={0}
           y={(H - RECT_HEIGHT) / 2}
           width={RECT_WIDTH[tag]}
           height={RECT_HEIGHT}
@@ -42,7 +42,7 @@ export function TagIcon({ tag, size = 24 }: { tag?: ShotTag; size?: number }) {
           stroke="none"
         />
       ) : (
-        <rect x="1" y="6" width="32" height="12" rx="2" stroke-dasharray="3 3" />
+        <rect x="0.8" y="6" width="32" height="12" rx="2" stroke-dasharray="3 3" />
       )}
     </svg>
   );

@@ -104,7 +104,7 @@ html, body { margin: 0; background: #101114; color: #e8e8ea; font-family: system
 /* shot tags on the cards: quiet line icons, one colour each */
 .section-meta { display: flex; align-items: center; gap: .3rem; flex-wrap: wrap; }
 .tag-btn { min-height: 44px; min-width: 70px; display: inline-flex; align-items: center; justify-content: center; padding: 0; background: none; color: #6b7280; border: 0; border-radius: 10px; cursor: pointer; }
-.tag-btn { gap: 4px; }
+.tag-btn { gap: 2px; justify-content: flex-start; padding: 0 6px; }
 .tag-letter { font-weight: 700; font-size: 15px; min-width: 14px; text-align: center; }
 .tag-btn:hover, .tag-btn:active { background: #22252b; }
 .tag-btn.empty { opacity: .55; }
