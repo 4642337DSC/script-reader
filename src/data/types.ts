@@ -7,6 +7,9 @@ export interface SectionRow {
   location: string | null; done: boolean; updatedAt: number; orphaned: boolean;
   originalText: string | null; suggestedLocation: string | null; tag: string | null;
 }
+export interface BrollRow {
+  id: string; videoId: string; order: number; text: string; done: boolean; updatedAt: number; originalText: string | null;
+}
 export interface VideoRow {
   id: string; title: string; group: string | null; notes: string;
   originalTitle: string; originalNotes: string; order: number;
@@ -16,6 +19,7 @@ export interface ScriptData {
   doc: ScriptDoc; // doc.fileId = script id
   orders: Record<string, number>;
   videoOrders: Record<string, number>;
+  brollOrders?: Record<string, number>;
   /** True when the videos came from the old `videos` array on the script document (converted on next save). */
   legacy?: boolean;
 }

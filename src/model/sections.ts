@@ -1,4 +1,4 @@
-import type { ParsedVideo, Section, ShotTag, Video } from './types';
+import type { BrollItem, ParsedVideo, Section, ShotTag, Video } from './types';
 
 const newId = () => crypto.randomUUID();
 
@@ -81,6 +81,32 @@ export function dismissSuggestion(video: Video, sectionId: string, now: number):
   const s = video.sections.find((x) => x.id === sectionId);
   if (!s || !s.suggestedLocation) return video;
   return mapSection(video, sectionId, (x) => ({ ...x, suggestedLocation: '', updatedAt: now }));
+}
+
+function mapBroll(video: Video, id: string, fn: (b: BrollItem) => BrollItem): Video {
+  if (!video.broll?.some((b) => b.id === id)) return video;
+  return { ...video, broll: video.broll.map((b) => (b.id === id ? fn(b) : b)) };
+}
+
+export function addBroll(video: Video, text: string, now: number): Video {
+  const t = text.trim();
+  if (!t) return video;
+  return { ...video, broll: [...(video.broll ?? []), { id: newId(), text: t, done: false, updatedAt: now }] };
+}
+
+export function toggleBroll(video: Video, id: string, now: number): Video {
+  return mapBroll(video, id, (b) => ({ ...b, done: !b.done, updatedAt: now }));
+}
+
+export function setBrollText(video: Video, id: string, text: string, now: number): Video {
+  const t = text.trim();
+  if (!t) return video;
+  return mapBroll(video, id, (b) => ({ ...b, text: t, updatedAt: now }));
+}
+
+export function removeBroll(video: Video, id: string): Video {
+  if (!video.broll?.some((b) => b.id === id)) return video;
+  return { ...video, broll: video.broll.filter((b) => b.id !== id) };
 }
 
 export const TAGS: readonly ShotTag[] = ['wide', 'medium', 'closeup', 'voiceover'];

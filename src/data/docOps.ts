@@ -1,5 +1,5 @@
-import type { Section, Video } from '../model/types';
-import type { ScriptData, ScriptDoc, SectionRow, VideoRow } from './types';
+import type { BrollItem, Section, Video } from '../model/types';
+import type { BrollRow, ScriptData, ScriptDoc, SectionRow, VideoRow } from './types';
 
 type Patch = Partial<Omit<SectionRow, 'id'>>;
 type VideoPatch = Partial<Omit<VideoRow, 'id'>>;
@@ -46,6 +46,10 @@ export function assignVideoOrders(doc: ScriptDoc, known: Record<string, number>)
   return orderSequence(doc.videos.map((v) => v.id), known);
 }
 
+export function assignBrollOrders(doc: ScriptDoc, known: Record<string, number>): Record<string, number> {
+  return orderSequence(doc.videos.flatMap((v) => (v.broll ?? []).map((b) => b.id)), known);
+}
+
 export function legacyVideoRows(videos: { id: string; title: string }[]): VideoRow[] {
   return videos.map((v, i) => ({
     id: v.id, title: v.title, group: null, notes: '', originalTitle: v.title, originalNotes: '', order: STEP * (i + 1),
@@ -56,7 +60,8 @@ export function flattenDoc(
   doc: ScriptDoc,
   orders: Record<string, number>,
   videoOrders: Record<string, number> = assignVideoOrders(doc, {}),
-): { videos: VideoRow[]; rows: SectionRow[] } {
+  brollOrders: Record<string, number> = assignBrollOrders(doc, {}),
+): { videos: VideoRow[]; rows: SectionRow[]; broll: BrollRow[] } {
   const row = (s: Section, videoId: string | null): SectionRow => ({
     id: s.id, videoId, order: orders[s.id], text: s.text, location: s.location,
     done: s.done, updatedAt: s.updatedAt, orphaned: videoId === null,
@@ -68,10 +73,17 @@ export function flattenDoc(
       originalTitle: v.originalTitle ?? v.title, originalNotes: v.originalNotes ?? '', order: videoOrders[v.id],
     })),
     rows: [...doc.videos.flatMap((v) => v.sections.map((s) => row(s, v.id))), ...doc.orphans.map((s) => row(s, null))],
+    broll: doc.videos.flatMap((v) => (v.broll ?? []).map((b): BrollRow => ({
+      id: b.id, videoId: v.id, order: brollOrders[b.id], text: b.text, done: b.done, updatedAt: b.updatedAt, originalText: b.originalText ?? null,
+    }))),
   };
 }
 
-export function assembleDoc(id: string, name: string, videos: VideoRow[], rows: SectionRow[]): ScriptData {
+export function assembleDoc(id: string, name: string, videos: VideoRow[], rows: SectionRow[], broll: BrollRow[] = []): ScriptData {
+  const sortedBroll = [...broll].sort((a, b) => a.order - b.order);
+  const toItem = (r: BrollRow): BrollItem => ({
+    id: r.id, text: r.text, done: r.done, updatedAt: r.updatedAt, ...(r.originalText !== null ? { originalText: r.originalText } : {}),
+  });
   const sorted = [...rows].sort((a, b) => a.order - b.order);
   const sortedVideos = [...videos].sort((a, b) => a.order - b.order);
   const toSection = (r: SectionRow): Section => ({
@@ -83,11 +95,14 @@ export function assembleDoc(id: string, name: string, videos: VideoRow[], rows: 
   const vids: Video[] = sortedVideos.map((v) => ({
     id: v.id, title: v.title, group: v.group, notes: v.notes, originalTitle: v.originalTitle, originalNotes: v.originalNotes,
     sections: sorted.filter((r) => !r.orphaned && r.videoId === v.id).map(toSection),
+    ...(sortedBroll.some((b) => b.videoId === v.id) ? { broll: sortedBroll.filter((b) => b.videoId === v.id).map(toItem) } : {}),
   }));
   const orders: Record<string, number> = {};
   sorted.forEach((r) => { orders[r.id] = r.order; });
   const videoOrders: Record<string, number> = {};
   sortedVideos.forEach((v) => { videoOrders[v.id] = v.order; });
+  const brollOrders: Record<string, number> = {};
+  sortedBroll.forEach((b) => { brollOrders[b.id] = b.order; });
   return {
     doc: {
       fileId: id, name, videos: vids,
@@ -96,6 +111,7 @@ export function assembleDoc(id: string, name: string, videos: VideoRow[], rows: 
     },
     orders,
     videoOrders,
+    brollOrders,
   };
 }
 
@@ -114,6 +130,26 @@ export function diffRows(before: SectionRow[], after: SectionRow[]) {
     for (const f of FIELDS) if (o[f] !== r[f]) patch[f] = r[f];
     if (Object.keys(patch).length && !('updatedAt' in patch)) patch.updatedAt = r.updatedAt;
     if (Object.keys(patch).length) updates.push({ id: r.id, patch: patch as Patch });
+  }
+  const deletes = before.filter((r) => !seen.has(r.id)).map((r) => r.id);
+  return { sets, updates, deletes };
+}
+
+const BROLL_FIELDS = ['videoId', 'order', 'text', 'done', 'originalText', 'updatedAt'] as const;
+
+export function diffBroll(before: BrollRow[], after: BrollRow[]) {
+  const old = new Map(before.map((r) => [r.id, r]));
+  const seen = new Set<string>();
+  const sets: BrollRow[] = [];
+  const updates: { id: string; patch: Partial<Omit<BrollRow, 'id'>> }[] = [];
+  for (const r of after) {
+    seen.add(r.id);
+    const o = old.get(r.id);
+    if (!o) { sets.push(r); continue; }
+    const patch: Record<string, unknown> = {};
+    for (const f of BROLL_FIELDS) if (o[f] !== r[f]) patch[f] = r[f];
+    if (Object.keys(patch).length && !('updatedAt' in patch)) patch.updatedAt = r.updatedAt;
+    if (Object.keys(patch).length) updates.push({ id: r.id, patch: patch as Partial<Omit<BrollRow, 'id'>> });
   }
   const deletes = before.filter((r) => !seen.has(r.id)).map((r) => r.id);
   return { sets, updates, deletes };

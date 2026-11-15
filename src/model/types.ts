@@ -9,12 +9,16 @@ export interface Section {
   /** How this card is shot: wide, medium, close-up, or voiceover. Absent = not tagged. */
   tag?: ShotTag;
 }
+/** One shot on a video's B-roll checklist. */
+export interface BrollItem { id: string; text: string; done: boolean; updatedAt: number; originalText?: string }
+
 export interface Video {
   id: string; title: string; sections: Section[];
   group?: string | null; notes?: string; originalTitle?: string; originalNotes?: string;
+  broll?: BrollItem[];
 }
 export interface ScriptDoc { fileId: string; name: string; videos: Video[]; orphans: Section[]; updatedAt: number }
 export interface ParsedVideo { title: string; paragraphs: string[] }
 
 export interface ImportedParagraph { source: string; text: string; suggestedLocation?: string | null }
-export interface ImportedVideo { title: string; group: string | null; notes: string; paragraphs: ImportedParagraph[] }
+export interface ImportedVideo { title: string; group: string | null; notes: string; paragraphs: ImportedParagraph[]; /** B-roll shots found in the filming notes */ broll?: string[] }

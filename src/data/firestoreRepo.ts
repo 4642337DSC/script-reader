@@ -5,9 +5,9 @@ import {
 import { buildVideosFromImport, normalizeImport } from '../import/importModel';
 import { countNewOrphans, reimport } from '../model/reimport';
 import { recordLocation } from '../model/recentLocations';
-import { assembleDoc, assignOrders, assignVideoOrders, chunk, diffRows, diffVideos, flattenDoc, legacyVideoRows } from './docOps';
+import { assembleDoc, assignBrollOrders, assignOrders, assignVideoOrders, chunk, diffBroll, diffRows, diffVideos, flattenDoc, legacyVideoRows } from './docOps';
 import type {
-  AuthUser, Client, ImportedVideo, ParsedVideo, Repo, RepoError, ScriptData, ScriptDoc, SectionRow, SyncState, Unsub, VideoRow,
+  AuthUser, Client, ImportedVideo, ParsedVideo, Repo, RepoError, ScriptData, ScriptDoc, SectionRow, SyncState, Unsub, VideoRow, BrollRow,
 } from './types';
 
 const BATCH = 450;
@@ -38,13 +38,18 @@ function toVideoRow(id: string, d: DocumentData): VideoRow | null {
     originalTitle: d.originalTitle ?? d.title, originalNotes: d.originalNotes ?? '', order: d.order,
   };
 }
+/** Same ghost rule for B-roll documents. */
+function toBrollRow(id: string, d: DocumentData): BrollRow | null {
+  if (typeof d.text !== 'string' || typeof d.order !== 'number' || typeof d.videoId !== 'string') return null;
+  return { id, videoId: d.videoId, order: d.order, text: d.text, done: !!d.done, updatedAt: d.updatedAt ?? 0, originalText: d.originalText ?? null };
+}
 const withoutId = <T extends { id: string }>({ id: _id, ...rest }: T) => rest;
 
 /** Videos live in their own documents; scripts saved before that carry a `videos` array on the script document. */
-function assemble(scriptId: string, meta: DocumentData, rows: SectionRow[], videoRows: VideoRow[]): ScriptData {
+function assemble(scriptId: string, meta: DocumentData, rows: SectionRow[], videoRows: VideoRow[], brollRows: BrollRow[] = []): ScriptData {
   const legacyList: { id: string; title: string }[] = videoRows.length === 0 ? (meta.videos ?? []) : [];
   const legacy = legacyList.length > 0;
-  const data = assembleDoc(scriptId, meta.name ?? '', legacy ? legacyVideoRows(legacyList) : videoRows, rows);
+  const data = assembleDoc(scriptId, meta.name ?? '', legacy ? legacyVideoRows(legacyList) : videoRows, rows, brollRows);
   return legacy ? { ...data, legacy: true } : data;
 }
 
@@ -71,13 +76,15 @@ export function createFirestoreRepo(db: Firestore, user: AuthUser): Repo {
   const scriptsCol = (c: string) => collection(db, 'clients', c, 'scripts');
   const sectionsCol = (c: string, s: string) => collection(db, 'clients', c, 'scripts', s, 'sections');
   const videosCol = (c: string, s: string) => collection(db, 'clients', c, 'scripts', s, 'videos');
+  const brollCol = (c: string, s: string) => collection(db, 'clients', c, 'scripts', s, 'broll');
 
   async function loadScript(c: string, s: string, meta: DocumentData): Promise<ScriptData> {
-    const [sec, vid] = await Promise.all([getDocs(sectionsCol(c, s)), getDocs(videosCol(c, s))]);
+    const [sec, vid, br] = await Promise.all([getDocs(sectionsCol(c, s)), getDocs(videosCol(c, s)), getDocs(brollCol(c, s))]);
     return assemble(
       s, meta,
       sec.docs.map((d) => toRow(d.id, d.data())).filter((r): r is SectionRow => !!r),
       vid.docs.map((d) => toVideoRow(d.id, d.data())).filter((r): r is VideoRow => !!r),
+      br.docs.map((d) => toBrollRow(d.id, d.data())).filter((r): r is BrollRow => !!r),
     );
   }
 
@@ -92,8 +99,11 @@ export function createFirestoreRepo(db: Firestore, user: AuthUser): Repo {
   async function save(c: string, s: string, before: ScriptData, after: ScriptDoc): Promise<{ droppedOnReject?: number }> {
     const orders = assignOrders(after, before.orders);
     const videoOrders = assignVideoOrders(after, before.videoOrders);
-    const beforeFlat = flattenDoc(before.doc, before.orders, before.videoOrders);
-    const flat = flattenDoc(after, orders, videoOrders);
+    const beforeBroll = before.brollOrders ?? assignBrollOrders(before.doc, {});
+    const brollOrders = assignBrollOrders(after, beforeBroll);
+    const beforeFlat = flattenDoc(before.doc, before.orders, before.videoOrders, beforeBroll);
+    const flat = flattenDoc(after, orders, videoOrders, brollOrders);
+    const bd = diffBroll(beforeFlat.broll, flat.broll);
     const d = diffRows(beforeFlat.rows, flat.rows);
     let vd = diffVideos(beforeFlat.videos, flat.videos);
     // First save of a script that still has the old `videos` array: write every video document once.
@@ -107,10 +117,11 @@ export function createFirestoreRepo(db: Firestore, user: AuthUser): Repo {
         vd = { sets: flat.videos, updates: [], deletes: [] };
       }
     }
-    const total = d.sets.length + d.updates.length + d.deletes.length + vd.sets.length + vd.updates.length + vd.deletes.length;
+    const total = d.sets.length + d.updates.length + d.deletes.length + vd.sets.length + vd.updates.length + vd.deletes.length + bd.sets.length + bd.updates.length + bd.deletes.length;
     if (!total) return {};
     const secDoc = (id: string) => doc(sectionsCol(c, s), id);
     const vidDoc = (id: string) => doc(videosCol(c, s), id);
+    const brDoc = (id: string) => doc(brollCol(c, s), id);
     const ops: ((b: WriteBatch) => void)[] = [
       ...d.sets.map((r) => (b: WriteBatch) => b.set(secDoc(r.id), withoutId(r))),
       // merge-set, not update: if the section was deleted meanwhile this must not fail the whole batch
@@ -119,6 +130,9 @@ export function createFirestoreRepo(db: Firestore, user: AuthUser): Repo {
       ...vd.sets.map((v) => (b: WriteBatch) => b.set(vidDoc(v.id), withoutId(v), converting ? { merge: true } : {})),
       ...vd.updates.map((u) => (b: WriteBatch) => b.set(vidDoc(u.id), u.patch, { merge: true })),
       ...vd.deletes.map((id) => (b: WriteBatch) => b.delete(vidDoc(id))),
+      ...bd.sets.map((r) => (b: WriteBatch) => b.set(brDoc(r.id), withoutId(r))),
+      ...bd.updates.map((u) => (b: WriteBatch) => b.set(brDoc(u.id), u.patch, { merge: true })),
+      ...bd.deletes.map((id) => (b: WriteBatch) => b.delete(brDoc(id))),
     ];
     const scriptRef = doc(scriptsCol(c), s);
     const scriptPatch = {
@@ -184,16 +198,17 @@ export function createFirestoreRepo(db: Firestore, user: AuthUser): Repo {
       let meta: DocumentData | null | undefined;
       let rows: SectionRow[] | undefined;
       let vrows: VideoRow[] | undefined;
+      let brows: BrollRow[] | undefined;
       const emit = () => {
-        if (meta === undefined || rows === undefined || vrows === undefined) return;
+        if (meta === undefined || rows === undefined || vrows === undefined || brows === undefined) return;
         // The script, section and video listeners fire separately. A script that says it has videos
         // (videoCount) but shows none yet is a half-arrived update, not an empty script: wait for the rest.
         if (meta !== null && vrows.length === 0 && !(meta.videos?.length) && (meta.videoCount ?? 0) > 0) return;
-        cb(meta === null ? null : assemble(scriptId, meta, rows, vrows));
+        cb(meta === null ? null : assemble(scriptId, meta, rows, vrows, brows));
       };
       const key = `${clientId}/${scriptId}/${Math.random()}`;
-      const flags = { meta: false, rows: false, videos: false };
-      const markPending = () => { snapPending.set(key, flags.meta || flags.rows || flags.videos); emitSync(); };
+      const flags = { meta: false, rows: false, videos: false, broll: false };
+      const markPending = () => { snapPending.set(key, flags.meta || flags.rows || flags.videos || flags.broll); emitSync(); };
       // includeMetadataChanges so the pending flag clears when the server acknowledges a write;
       // data is only re-emitted to the UI when it actually changed.
       const u1 = onSnapshot(
@@ -233,7 +248,19 @@ export function createFirestoreRepo(db: Firestore, user: AuthUser): Repo {
         },
         (e) => onError(toError(e)),
       );
-      return () => { u1(); u2(); u3(); snapPending.delete(key); emitSync(); };
+      const u4 = onSnapshot(
+        brollCol(clientId, scriptId),
+        { includeMetadataChanges: true },
+        (snap) => {
+          const first = brows === undefined;
+          brows = snap.docs.map((d) => toBrollRow(d.id, d.data())).filter((r): r is BrollRow => !!r);
+          flags.broll = snap.metadata.hasPendingWrites;
+          markPending();
+          if (first || snap.docChanges().length > 0) emit();
+        },
+        (e) => onError(toError(e)),
+      );
+      return () => { u1(); u2(); u3(); u4(); snapPending.delete(key); emitSync(); };
     },
 
     watchRecents(clientId, cb) {
@@ -278,18 +305,19 @@ export function createFirestoreRepo(db: Firestore, user: AuthUser): Repo {
       }
       const ref = doc(scriptsCol(clientId));
       const docNew: ScriptDoc = { fileId: ref.id, name, videos: buildVideosFromImport(imported, Date.now()), orphans: [], updatedAt: Date.now() };
-      const flat = flattenDoc(docNew, assignOrders(docNew, {}), assignVideoOrders(docNew, {}));
+      const flat = flattenDoc(docNew, assignOrders(docNew, {}), assignVideoOrders(docNew, {}), assignBrollOrders(docNew, {}));
       await track(commitOps([
         (b) => b.set(ref, { name, updatedAt: Date.now(), videoCount: flat.videos.length }),
         ...flat.videos.map((v) => (b: WriteBatch) => b.set(doc(videosCol(clientId, ref.id), v.id), withoutId(v))),
         ...flat.rows.map((r) => (b: WriteBatch) => b.set(doc(sectionsCol(clientId, ref.id), r.id), withoutId(r))),
+        ...flat.broll.map((r) => (b: WriteBatch) => b.set(doc(brollCol(clientId, ref.id), r.id), withoutId(r))),
       ]));
       return { scriptId: ref.id, reimported: false, orphanedCount: 0 };
     },
 
     async deleteScript(clientId, scriptId) {
-      const [sec, vid] = await Promise.all([getDocs(sectionsCol(clientId, scriptId)), getDocs(videosCol(clientId, scriptId))]);
-      await commitOps([...sec.docs, ...vid.docs].map((d) => (b: WriteBatch) => b.delete(d.ref)));
+      const [sec, vid, br] = await Promise.all([getDocs(sectionsCol(clientId, scriptId)), getDocs(videosCol(clientId, scriptId)), getDocs(brollCol(clientId, scriptId))]);
+      await commitOps([...sec.docs, ...vid.docs, ...br.docs].map((d) => (b: WriteBatch) => b.delete(d.ref)));
       await deleteDoc(doc(scriptsCol(clientId), scriptId));
     },
 

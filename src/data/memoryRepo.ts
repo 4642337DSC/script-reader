@@ -1,13 +1,13 @@
 import { countNewOrphans, reimport } from '../model/reimport';
 import { buildVideosFromImport, normalizeImport } from '../import/importModel';
 import { recordLocation } from '../model/recentLocations';
-import { assembleDoc, assignOrders, assignVideoOrders, diffRows, diffVideos, flattenDoc } from './docOps';
+import { assembleDoc, assignBrollOrders, assignOrders, assignVideoOrders, diffBroll, diffRows, diffVideos, flattenDoc } from './docOps';
 import type {
-  AuthUser, Client, ImportedVideo, ParsedVideo, Repo, RepoError, ScriptData, ScriptDoc, ScriptSummary, SectionRow, SyncState, Unsub, VideoRow,
+  AuthUser, Client, ImportedVideo, ParsedVideo, Repo, RepoError, ScriptData, ScriptDoc, ScriptSummary, SectionRow, SyncState, Unsub, VideoRow, BrollRow,
 } from './types';
 
 /** In-memory Repo used by UI tests. Mirrors the real repo's contract, including access checks. */
-interface MScript { id: string; name: string; videos: VideoRow[]; rows: SectionRow[]; updatedAt: number }
+interface MScript { id: string; name: string; videos: VideoRow[]; rows: SectionRow[]; broll: BrollRow[]; updatedAt: number }
 interface MClient { id: string; name: string; members: string[]; scripts: Map<string, MScript>; recents: string[] }
 
 export interface MemoryBackend {
@@ -62,16 +62,18 @@ export function createMemoryRepo(opts: Opts): MemoryRepo {
     });
   };
 
-  const scriptData = (s: MScript): ScriptData => assembleDoc(s.id, s.name, s.videos, s.rows);
+  const scriptData = (s: MScript): ScriptData => assembleDoc(s.id, s.name, s.videos, s.rows, s.broll);
 
   function applySave(clientId: string, scriptId: string, before: ScriptData, after: ScriptDoc): { droppedOnReject?: number } {
     const orders = assignOrders(after, before.orders);
     const videoOrders = assignVideoOrders(after, before.videoOrders);
-    const beforeFlat = flattenDoc(before.doc, before.orders, before.videoOrders);
-    const flat = flattenDoc(after, orders, videoOrders);
+    const brollOrders = assignBrollOrders(after, before.brollOrders ?? assignBrollOrders(before.doc, {}));
+    const beforeFlat = flattenDoc(before.doc, before.orders, before.videoOrders, before.brollOrders ?? assignBrollOrders(before.doc, {}));
+    const flat = flattenDoc(after, orders, videoOrders, brollOrders);
+    const bd = diffBroll(beforeFlat.broll, flat.broll);
     const d = diffRows(beforeFlat.rows, flat.rows);
     const vd = diffVideos(beforeFlat.videos, flat.videos);
-    const total = d.sets.length + d.updates.length + d.deletes.length + vd.sets.length + vd.updates.length + vd.deletes.length;
+    const total = d.sets.length + d.updates.length + d.deletes.length + vd.sets.length + vd.updates.length + vd.deletes.length + bd.sets.length + bd.updates.length + bd.deletes.length;
     const c = backend.clients.get(clientId);
     const s = c?.scripts.get(scriptId);
     if (!canOpen(c) || !s) return { droppedOnReject: total };
@@ -85,6 +87,11 @@ export function createMemoryRepo(opts: Opts): MemoryRepo {
     vd.updates.forEach((u) => { const v = vById.get(u.id); if (v) vById.set(u.id, { ...v, ...u.patch }); });
     vd.deletes.forEach((id) => vById.delete(id));
     s.videos = [...vById.values()];
+    const bById = new Map(s.broll.map((r) => [r.id, r]));
+    bd.sets.forEach((r) => bById.set(r.id, r));
+    bd.updates.forEach((u) => { const r = bById.get(u.id); if (r) bById.set(u.id, { ...r, ...u.patch }); });
+    bd.deletes.forEach((id) => bById.delete(id));
+    s.broll = [...bById.values()];
     s.updatedAt = now();
     return {};
   }
@@ -167,8 +174,8 @@ export function createMemoryRepo(opts: Opts): MemoryRepo {
         }
         const id = `s${++backend.seq}`;
         const doc: ScriptDoc = { fileId: id, name, videos: buildVideosFromImport(normalizeImport(parsed), now()), orphans: [], updatedAt: now() };
-        const flat = flattenDoc(doc, assignOrders(doc, {}), assignVideoOrders(doc, {}));
-        c.scripts.set(id, { id, name, videos: flat.videos, rows: flat.rows, updatedAt: now() });
+        const flat = flattenDoc(doc, assignOrders(doc, {}), assignVideoOrders(doc, {}), assignBrollOrders(doc, {}));
+        c.scripts.set(id, { id, name, videos: flat.videos, rows: flat.rows, broll: flat.broll, updatedAt: now() });
         return { scriptId: id, reimported: false, orphanedCount: 0 };
       });
     },

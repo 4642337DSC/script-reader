@@ -130,6 +130,7 @@ export function reimport(old: ScriptDoc, input: ImportedVideo[] | ParsedVideo[],
       notes: userEditedNotes ? match.notes ?? '' : notesChanged ? p.notes : match.notes ?? '',
       originalNotes: notesChanged ? p.notes : match.originalNotes ?? '',
       group: p.group,
+      ...(match.broll?.length ? { broll: match.broll } : {}),
       sections,
     });
   });

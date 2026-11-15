@@ -46,6 +46,9 @@ export function buildVideosFromImport(imported: ImportedVideo[], now: number): V
     notes: v.notes,
     originalTitle: v.title,
     originalNotes: v.notes,
+    ...(v.broll?.length
+      ? { broll: v.broll.map((text) => ({ id: crypto.randomUUID(), text, done: false, updatedAt: now, originalText: text })) }
+      : {}),
     sections: v.paragraphs.map((p) => ({
       id: crypto.randomUUID(),
       text: p.text,
