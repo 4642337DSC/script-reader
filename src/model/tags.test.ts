@@ -17,15 +17,15 @@ const mk = (): Video => ({
 });
 
 describe('shot tags', () => {
-  test('the order is none, wide, medium, closeup, voiceover, none', () => {
-    expect(TAGS).toEqual(['wide', 'medium', 'closeup', 'voiceover']);
+  test('the order is none, voiceover, wide, medium, closeup, none', () => {
+    expect(TAGS).toEqual(['voiceover', 'wide', 'medium', 'closeup']);
     let v = mk();
     const seen: (string | undefined)[] = [];
     for (let i = 0; i < 5; i++) {
       v = cycleTag(v, 'a', 10 + i);
       seen.push(v.sections[0].tag);
     }
-    expect(seen).toEqual(['wide', 'medium', 'closeup', 'voiceover', undefined]);
+    expect(seen).toEqual(['voiceover', 'wide', 'medium', 'closeup', undefined]);
   });
 
   test('cycling bumps updatedAt on that card only and ignores unknown ids', () => {
@@ -39,7 +39,7 @@ describe('shot tags', () => {
   test('a card carved out of a tagged card keeps the tag; splitting keeps it on both halves', () => {
     const v = cycleTag(mk(), 'a', 2);
     const carved = carveWordsIntoSection(v, 'a', 2, 3, 'after', 5).video;
-    expect(carved.sections.map((s) => s.tag)).toEqual(['wide', 'wide', undefined]);
+    expect(carved.sections.map((s) => s.tag)).toEqual(['voiceover', 'voiceover', undefined]);
   });
 
   test('a re-import keeps the tag on unchanged text', () => {
@@ -49,7 +49,7 @@ describe('shot tags', () => {
     };
     doc.videos[0] = cycleTag(doc.videos[0], doc.videos[0].sections[1].id, 2);
     const r = reimport(doc, [{ title: 'T', group: null, notes: '', paragraphs: [{ source: 'a', text: 'a' }, { source: 'b', text: 'b' }] }], 9);
-    expect(r.videos[0].sections.map((s) => s.tag)).toEqual([undefined, 'wide']);
+    expect(r.videos[0].sections.map((s) => s.tag)).toEqual([undefined, 'voiceover']);
   });
 });
 
@@ -63,9 +63,9 @@ describe('shot tags in the data layer', () => {
     const vo = assignVideoOrders(before, {});
     const rowsBefore = flattenDoc(before, o, vo);
     const rowsAfter = flattenDoc(after, o, vo);
-    expect(diffRows(rowsBefore.rows, rowsAfter.rows).updates).toEqual([{ id: 'b', patch: { tag: 'wide', updatedAt: 7 } }]);
+    expect(diffRows(rowsBefore.rows, rowsAfter.rows).updates).toEqual([{ id: 'b', patch: { tag: 'voiceover', updatedAt: 7 } }]);
     const back = assembleDoc('s', 'n', rowsAfter.videos, rowsAfter.rows);
-    expect(back.doc.videos[0].sections.map((s) => s.tag)).toEqual([undefined, 'wide']);
+    expect(back.doc.videos[0].sections.map((s) => s.tag)).toEqual([undefined, 'voiceover']);
   });
 
   test('a tag set by one member reaches another and can be cleared again', async () => {
@@ -79,7 +79,7 @@ describe('shot tags in the data layer', () => {
     const get = (r: typeof anna) => { let d: ScriptData | null = null; r.watchScript(c1, scriptId, (x) => { d = x; }, () => {})(); return d!; };
     const s0 = get(anna);
     await anna.saveScript(c1, scriptId, s0, { ...s0.doc, videos: [cycleTag(s0.doc.videos[0], s0.doc.videos[0].sections[0].id, 5)] });
-    expect(get(bob).doc.videos[0].sections.map((s) => s.tag)).toEqual(['wide', undefined]);
+    expect(get(bob).doc.videos[0].sections.map((s) => s.tag)).toEqual(['voiceover', undefined]);
     const s1 = get(bob);
     let v = s1.doc.videos[0];
     for (let i = 0; i < 4; i++) v = cycleTag(v, v.sections[0].id, 6 + i);

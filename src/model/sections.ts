@@ -110,9 +110,9 @@ export function removeBroll(video: Video, id: string): Video {
   return { ...video, broll: video.broll.filter((b) => b.id !== id) };
 }
 
-export const TAGS: readonly ShotTag[] = ['wide', 'medium', 'closeup', 'voiceover'];
+export const TAGS: readonly ShotTag[] = ['voiceover', 'wide', 'medium', 'closeup'];
 
-/** none -> wide -> medium -> closeup -> voiceover -> none */
+/** none -> voiceover -> wide -> medium -> closeup -> none */
 export function cycleTag(video: Video, sectionId: string, now: number): Video {
   return mapSection(video, sectionId, (s) => {
     const { tag, ...rest } = s;

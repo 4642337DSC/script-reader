@@ -69,14 +69,14 @@ describe('shot tag icon on each card', () => {
     }
   });
 
-  test('tapping the icon cycles none, wide, medium, close-up, voiceover, none', () => {
+  test('tapping the icon cycles none, voiceover, wide, medium, close-up, none', () => {
     const r = setup();
     const seen: (string | undefined)[] = [];
     for (let i = 0; i < 5; i++) {
       fireEvent.click(r.tagBtn(0));
       seen.push(r.last().sections[0].tag);
     }
-    expect(seen).toEqual(['wide', 'medium', 'closeup', 'voiceover', undefined]);
+    expect(seen).toEqual(['voiceover', 'wide', 'medium', 'closeup', undefined]);
     expect(r.tagBtn(0).getAttribute('aria-label')).toBe('Shot tag: none');
   });
 
