@@ -136,3 +136,10 @@ html, body { margin: 0; background: #101114; color: #e8e8ea; font-family: system
 .reader-head h1 { flex: 1 1 100%; }
 .reader-head .edit-title { margin-right: auto; }
 .font-ctl { display: flex; flex-wrap: nowrap; }
+
+/* location popup: big, easy-to-hit suggestion chips and Clear button */
+.loc-pop { width: min(360px, calc(100vw - 16px)); }
+.loc-pop .chip { min-height: 52px; padding: 0 1.3rem; font-size: 1.15rem; }
+.loc-pop .chips { gap: .6rem; margin-top: .7rem; }
+.loc-pop .pop-row { gap: .6rem; }
+.loc-pop .pop-row input { min-height: 52px; font-size: 1.1rem; }
