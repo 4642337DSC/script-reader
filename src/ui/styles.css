@@ -130,3 +130,9 @@ html, body { margin: 0; background: #101114; color: #e8e8ea; font-family: system
 .broll-text { flex: 1; min-width: 0; overflow-wrap: anywhere; cursor: pointer; padding: .5rem 0; }
 .broll-text.done { text-decoration: line-through; opacity: .5; }
 .broll-x { min-width: 44px; min-height: 44px; background: none; border: 0; color: #8a8f99; font-size: 1rem; }
+
+/* narrow screens: the title gets its own row, then edit, undo, A- and A+ stay together on one line */
+.reader-head { flex-wrap: wrap; }
+.reader-head h1 { flex: 1 1 100%; }
+.reader-head .edit-title { margin-right: auto; }
+.font-ctl { display: flex; flex-wrap: nowrap; }
