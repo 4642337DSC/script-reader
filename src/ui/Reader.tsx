@@ -21,6 +21,8 @@ interface Props {
   onOpenLocation: (id: string, anchor: Rect) => void;
   onCycleTag: (id: string) => void;
   onJoin: (sectionId: string) => void;
+  /** Starts a new video from the card below this gap (the gap's index). */
+  onSplitVideo?: (index: number) => void;
   onFontScale: (scale: number) => void;
   onEditTitle?: () => void;
   editingTitle?: boolean;
@@ -31,16 +33,17 @@ interface Props {
   afterHeader?: ComponentChildren;
 }
 
-function Gap({ index, over, joinId, onJoin }: { index: number; over: boolean; joinId?: string; onJoin: (id: string) => void }) {
+function Gap({ index, over, joinId, onJoin, onSplitVideo }: { index: number; over: boolean; joinId?: string; onJoin: (id: string) => void; onSplitVideo?: () => void }) {
   return (
     <div class={`gap${over ? ' over' : ''}`} data-drop-gap={index}>
       {joinId && <button class="gap-join" aria-label="Join paragraphs" onClick={() => onJoin(joinId)}>↑ join</button>}
+      {onSplitVideo && <button class="gap-split" aria-label="Start a new video here" onClick={onSplitVideo}>✂ new video here</button>}
     </div>
   );
 }
 
 export function Reader({
-  video, fontScale, ctl, over, message, canUndo, onUndo, onToggleDone, onOpenLocation, onCycleTag, onJoin, onFontScale, onEditTitle, editingTitle, onSaveTitle, onCancelTitle,
+  video, fontScale, ctl, over, message, canUndo, onUndo, onToggleDone, onOpenLocation, onCycleTag, onJoin, onSplitVideo, onFontScale, onEditTitle, editingTitle, onSaveTitle, onCancelTitle,
   onAcceptSuggestion, onDismissSuggestion, afterHeader,
 }: Props) {
   const clamp = (n: number) => Math.min(MAX_SCALE, Math.max(MIN_SCALE, n));
@@ -64,7 +67,7 @@ export function Reader({
       {afterHeader}
       {video.sections.map((s, idx) => (
         <div key={s.id}>
-          <Gap index={idx} over={over === `gap:${idx}`} joinId={idx > 0 ? s.id : undefined} onJoin={onJoin} />
+          <Gap index={idx} over={over === `gap:${idx}`} joinId={idx > 0 ? s.id : undefined} onJoin={onJoin} onSplitVideo={onSplitVideo && idx > 0 ? () => onSplitVideo(idx) : undefined} />
           <SectionView
             section={s}
             number={idx + 1}

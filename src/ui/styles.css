@@ -143,3 +143,8 @@ html, body { margin: 0; background: #101114; color: #e8e8ea; font-family: system
 .loc-pop .chips { gap: .6rem; margin-top: .7rem; }
 .loc-pop .pop-row { gap: .6rem; }
 .loc-pop .pop-row input { min-height: 52px; font-size: 1.1rem; }
+
+/* splitting and merging videos */
+.gap-split { position: relative; z-index: 1; min-height: 32px; padding: 0 .7rem; background: #101114; color: #6b7280; border: 0; border-radius: 999px; font-size: .75rem; cursor: pointer; }
+.gap-split:hover, .gap-split:active { color: #8ab4ff; }
+.merge-btn { flex: 0 0 auto; min-height: 44px; background: #22252b; color: #8ab4ff; border: 0; border-radius: 10px; padding: 0 .9rem; }

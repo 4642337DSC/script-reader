@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Repo, RepoError, ScriptData } from '../data/types';
 import type { Video } from '../model/types';
 import { ReaderScreen } from './ReaderScreen';
+import { splitVideoInDoc } from '../model/videos';
 
 interface Props {
   repo: Repo;
@@ -41,6 +42,14 @@ export function ReaderRoute({ repo, clientId, scriptId, videoId, onError, onNoti
     if (r[0] && r[0] !== recents[0]) void repo.addRecent(clientId, r[0]);
   };
 
+  const onSplitVideo = (index: number) => {
+    const base = latest.current ?? data;
+    const r = splitVideoInDoc(base.doc, videoId, index);
+    if (!r) return;
+    void repo.saveScript(clientId, scriptId, base, r.doc);
+    onNotice('Split. The new video is right after this one in the list.');
+  };
+
   return (
     <ReaderScreen
       key={videoId}
@@ -49,6 +58,7 @@ export function ReaderRoute({ repo, clientId, scriptId, videoId, onError, onNoti
       fontScale={fontScale}
       onFontScale={(n) => { setFontScale(n); localStorage.setItem('fontScale', String(n)); }}
       onChange={onChange}
+      onSplitVideo={onSplitVideo}
     />
   );
 }

@@ -18,6 +18,8 @@ interface Props {
   fontScale: number;
   onFontScale: (n: number) => void;
   onChange: (video: Video, recents: string[]) => void;
+  /** Splits the video before the card at this index; the parent saves it. */
+  onSplitVideo?: (index: number) => void;
   now?: () => number;
   /** Finds the element under a screen point; replaced in tests. */
   hit?: (x: number, y: number) => Element | null;
@@ -42,7 +44,7 @@ const fingerprint = (v: Video) =>
  * to join them, and use the pencil to edit a paragraph in place. No menus and no separate screens.
  */
 export function ReaderScreen({
-  video: initial, recents: initialRecents, fontScale, onFontScale, onChange, now = Date.now,
+  video: initial, recents: initialRecents, fontScale, onFontScale, onChange, onSplitVideo, now = Date.now,
   hit = (x, y) => document.elementFromPoint(x, y),
 }: Props) {
   const [video, setVideo] = useState(initial);
@@ -233,6 +235,7 @@ export function ReaderScreen({
         onToggleDone={(id) => commit(toggleDone(video, id, now()))}
         onOpenLocation={(id, anchor) => setMode({ kind: 'location', id, anchor })}
         onJoin={(id) => commit(mergeWithPrevious(video, id, now()))}
+        onSplitVideo={onSplitVideo}
         onCycleTag={(id) => commit(cycleTag(video, id, now()))}
         onEditTitle={() => setMode({ kind: 'title' })}
         editingTitle={mode.kind === 'title'}
