@@ -96,3 +96,15 @@ describe('shot tag icon on each card', () => {
   });
 });
 
+
+describe('deleting a card', () => {
+  test('the trash button removes the card and Undo brings it back', () => {
+    const r = setup();
+    const before = r.container.querySelectorAll('.section').length;
+    fireEvent.click(r.container.querySelectorAll('.del-card')[0]);
+    expect(r.last().sections.length).toBe(before - 1);
+    expect(r.container.querySelectorAll('.section').length).toBe(before - 1);
+    fireEvent.click(r.getByLabelText('Undo'));
+    expect(r.container.querySelectorAll('.section').length).toBe(before);
+  });
+});

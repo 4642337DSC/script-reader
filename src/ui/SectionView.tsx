@@ -28,6 +28,8 @@ interface Props {
   onOpenLocation: (id: string, anchor: Rect) => void;
   /** The shot tag icon: wide, medium, close-up, voiceover. */
   onCycleTag: (id: string) => void;
+  /** The trash button: removes the card (Undo brings it back). */
+  onDelete?: (id: string) => void;
   onAcceptSuggestion?: (id: string) => void;
   onDismissSuggestion?: (id: string) => void;
 }
@@ -40,7 +42,7 @@ function InlineEdit({ initial, onSave, onCancel }: { initial: string; onSave: (t
   );
 }
 
-export function SectionView({ section, number, ctl, over, onToggleDone, onOpenLocation, onCycleTag, onAcceptSuggestion, onDismissSuggestion }: Props) {
+export function SectionView({ section, number, ctl, over, onToggleDone, onOpenLocation, onCycleTag, onDelete, onAcceptSuggestion, onDismissSuggestion }: Props) {
   const suggestion = !section.location && section.suggestedLocation ? section.suggestedLocation : null;
   const sel = ctl.selection && ctl.selection.sectionId === section.id ? ctl.selection : null;
   const editing = ctl.editingId === section.id;
@@ -69,6 +71,7 @@ export function SectionView({ section, number, ctl, over, onToggleDone, onOpenLo
             onClick={() => onCycleTag(section.id)}
           ><span class="tag-letter" aria-hidden="true">{section.tag ? TAG_INFO[section.tag].label[0] : ''}</span><TagIcon tag={section.tag} /></button>
           </div>
+          {!editing && onDelete && <button class="del-card" aria-label="Delete card" onClick={() => onDelete(section.id)}>🗑</button>}
           {!editing && <button class="edit-btn" aria-label="Edit text" onClick={() => ctl.onStartEdit(section.id)}>✎</button>}
         </div>
         {suggestion && (

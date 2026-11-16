@@ -146,3 +146,9 @@ export function splitUntouchedSentences(video: Video, now: number): Video {
   });
   return changed ? { ...video, sections } : video;
 }
+
+/** Removes a card from the video. (The Undo button in the reader brings it back.) */
+export function deleteSection(video: Video, sectionId: string): Video {
+  if (!video.sections.some((s) => s.id === sectionId)) return video;
+  return { ...video, sections: video.sections.filter((s) => s.id !== sectionId) };
+}

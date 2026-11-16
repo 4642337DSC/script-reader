@@ -21,6 +21,7 @@ interface Props {
   onOpenLocation: (id: string, anchor: Rect) => void;
   onCycleTag: (id: string) => void;
   onJoin: (sectionId: string) => void;
+  onDeleteSection?: (sectionId: string) => void;
   /** Starts a new video from the card below this gap (the gap's index). */
   onSplitVideo?: (index: number) => void;
   onFontScale: (scale: number) => void;
@@ -43,7 +44,7 @@ function Gap({ index, over, joinId, onJoin, onSplitVideo }: { index: number; ove
 }
 
 export function Reader({
-  video, fontScale, ctl, over, message, canUndo, onUndo, onToggleDone, onOpenLocation, onCycleTag, onJoin, onSplitVideo, onFontScale, onEditTitle, editingTitle, onSaveTitle, onCancelTitle,
+  video, fontScale, ctl, over, message, canUndo, onUndo, onToggleDone, onOpenLocation, onCycleTag, onJoin, onDeleteSection, onSplitVideo, onFontScale, onEditTitle, editingTitle, onSaveTitle, onCancelTitle,
   onAcceptSuggestion, onDismissSuggestion, afterHeader,
 }: Props) {
   const clamp = (n: number) => Math.min(MAX_SCALE, Math.max(MIN_SCALE, n));
@@ -76,6 +77,7 @@ export function Reader({
             onToggleDone={onToggleDone}
             onOpenLocation={onOpenLocation}
             onCycleTag={onCycleTag}
+            onDelete={onDeleteSection}
             onAcceptSuggestion={onAcceptSuggestion}
             onDismissSuggestion={onDismissSuggestion}
           />

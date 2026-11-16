@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Video } from '../model/types';
 import {
-  acceptSuggestion, addBroll, cycleTag, dismissSuggestion, mergeWithPrevious, removeBroll, setBrollText, setLocation, setText, setVideoNotes, setVideoTitle, splitSection, toggleBroll, toggleDone, splitUntouchedSentences,
+  acceptSuggestion, addBroll, cycleTag, dismissSuggestion, mergeWithPrevious, removeBroll, setBrollText, setLocation, setText, setVideoNotes, setVideoTitle, splitSection, deleteSection, toggleBroll, toggleDone, splitUntouchedSentences,
 } from '../model/sections';
 import { carveWordsIntoSection, moveWordsToAdjacentSection } from '../model/wordMoves';
 import { recordLocation } from '../model/recentLocations';
@@ -236,6 +236,7 @@ export function ReaderScreen({
         onOpenLocation={(id, anchor) => setMode({ kind: 'location', id, anchor })}
         onJoin={(id) => commit(mergeWithPrevious(video, id, now()))}
         onSplitVideo={onSplitVideo}
+        onDeleteSection={(id) => commit(deleteSection(video, id))}
         onCycleTag={(id) => commit(cycleTag(video, id, now()))}
         onEditTitle={() => setMode({ kind: 'title' })}
         editingTitle={mode.kind === 'title'}

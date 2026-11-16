@@ -148,3 +148,5 @@ html, body { margin: 0; background: #101114; color: #e8e8ea; font-family: system
 .gap-split { position: relative; z-index: 1; min-height: 32px; padding: 0 .7rem; background: #101114; color: #6b7280; border: 0; border-radius: 999px; font-size: .75rem; cursor: pointer; }
 .gap-split:hover, .gap-split:active { color: #8ab4ff; }
 .merge-btn { flex: 0 0 auto; min-height: 44px; background: #22252b; color: #8ab4ff; border: 0; border-radius: 10px; padding: 0 .9rem; }
+
+.del-card { min-width: 44px; min-height: 44px; background: none; border: 0; color: #9a6a6f; font-size: 1.1rem; cursor: pointer; }
