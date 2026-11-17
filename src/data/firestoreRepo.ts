@@ -199,7 +199,15 @@ export function createFirestoreRepo(db: Firestore, user: AuthUser): Repo {
       let rows: SectionRow[] | undefined;
       let vrows: VideoRow[] | undefined;
       let brows: BrollRow[] | undefined;
+      let timer: ReturnType<typeof setTimeout> | null = null;
+      // The four listeners fire one after another for a single write (script doc first, then rows). Emitting on each
+      // would hand the UI a half-updated script that looks like someone else's edit (and wipes the reader's undo
+      // history), so wait for the burst to finish and emit once.
       const emit = () => {
+        if (timer) return;
+        timer = setTimeout(() => { timer = null; emitNow(); }, 0);
+      };
+      const emitNow = () => {
         if (meta === undefined || rows === undefined || vrows === undefined || brows === undefined) return;
         // The script, section and video listeners fire separately. A script that says it has videos
         // (videoCount) but shows none yet is a half-arrived update, not an empty script: wait for the rest.
@@ -260,7 +268,7 @@ export function createFirestoreRepo(db: Firestore, user: AuthUser): Repo {
         },
         (e) => onError(toError(e)),
       );
-      return () => { u1(); u2(); u3(); u4(); snapPending.delete(key); emitSync(); };
+      return () => { if (timer) clearTimeout(timer); timer = null; u1(); u2(); u3(); u4(); snapPending.delete(key); emitSync(); };
     },
 
     watchRecents(clientId, cb) {
