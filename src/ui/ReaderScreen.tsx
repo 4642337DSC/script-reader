@@ -105,16 +105,24 @@ export function ReaderScreen({
   const sectionIndex = (id: string) => video.sections.findIndex((s) => s.id === id);
   const startsOf = (text: string) => [...text.matchAll(/\S+/g)].map((m) => m.index ?? 0);
 
+  /** Cards in split mode: every word is a cut point until Done is tapped. */
+  const [splitIds, setSplitIds] = useState<ReadonlySet<string>>(new Set());
+
   const split = (sectionId: string, wordIndex: number) => {
-    if (wordIndex === 0) { setMessage('Double-tap a word after the first one to split before it.'); return; }
+    if (wordIndex === 0) { setMessage('Tap a word after the first one to split before it.'); return; }
     const s = video.sections[sectionIndex(sectionId)];
     if (!s) return;
     const r = splitSection(video, sectionId, startsOf(s.text)[wordIndex], now());
     if (r === video) { setMessage('That split is not possible here.'); return; }
+    if (splitIds.has(sectionId)) {
+      const before = new Set(video.sections.map((x) => x.id));
+      setSplitIds(new Set([...splitIds, ...r.sections.map((x) => x.id).filter((id) => !before.has(id))]));
+    }
     commit(r);
   };
 
   const clickWord = (sectionId: string, i: number) => {
+    if (splitIds.has(sectionId)) { split(sectionId, i); return; }
     const t = Date.now();
     const prev = lastTap.current;
     if (prev && prev.sectionId === sectionId && prev.i === i && t - prev.t < DOUBLE_TAP_MS) {
@@ -217,6 +225,9 @@ export function ReaderScreen({
     onStartEdit: (id) => { setEditingId(id); setSel(null); setMessage(''); },
     onSaveEdit: (id, text) => { setEditingId(null); commit(setText(video, id, text, now())); },
     onCancelEdit: () => setEditingId(null),
+    splitIds,
+    onToggleSplitMode: (id) => { setSel(null); setMessage(''); setSplitIds(splitIds.has(id) ? new Set() : new Set([id])); },
+    onSplitHere: (id, i) => split(id, i),
   };
 
   const locSection = mode.kind === 'location' ? video.sections.find((s) => s.id === mode.id) ?? null : null;

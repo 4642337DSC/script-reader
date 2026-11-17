@@ -164,3 +164,10 @@ html, body { margin: 0; background: #101114; color: #e8e8ea; font-family: system
 .w.hit { background: #7a6a1c; border-radius: 3px; }
 .section { scroll-margin-top: 9rem; }
 .filter-note { margin: .25rem 0; }
+
+/* splitting cards: scissors button, split mode and the "split before" button under a selection */
+.split-mode-btn { min-width: 44px; min-height: 44px; background: none; border: 0; color: #8a8f99; font-size: 1.1rem; cursor: pointer; }
+.split-mode-btn.on { background: #1f2a3a; color: #8ab4ff; border-radius: 10px; padding: 0 .8rem; font-size: 1rem; }
+.text.splitting .w { cursor: pointer; }
+.text.splitting span:not(:first-child) > .w { border-left: 2px dashed #8ab4ff; padding-left: 3px; margin-left: 1px; }
+.split-here { margin-top: .5rem; min-height: 48px; padding: 0 1rem; background: #1f2a3a; color: #8ab4ff; border: 0; border-radius: 10px; font-size: 1rem; }

@@ -14,6 +14,11 @@ export interface WordCtl {
   onStartEdit: (sectionId: string) => void;
   onSaveEdit: (sectionId: string, text: string) => void;
   onCancelEdit: () => void;
+  /** Cards currently in split mode: tapping any word cuts the card before it. */
+  splitIds?: ReadonlySet<string>;
+  onToggleSplitMode?: (sectionId: string) => void;
+  /** Cuts the card before the word at this index. */
+  onSplitHere?: (sectionId: string, wordIndex: number) => void;
 }
 
 interface Props {
@@ -60,6 +65,8 @@ export function SectionView({ section, number, ctl, over, highlight, onToggleDon
   const suggestion = !section.location && section.suggestedLocation ? section.suggestedLocation : null;
   const sel = ctl.selection && ctl.selection.sectionId === section.id ? ctl.selection : null;
   const editing = ctl.editingId === section.id;
+  const splitting = !!ctl.splitIds?.has(section.id);
+  const words = wordsOf(section.text);
   return (
     <div class={`section${section.done ? ' done' : ''}${over ? ' over' : ''}`} data-section={section.id}>
       <button
@@ -85,6 +92,7 @@ export function SectionView({ section, number, ctl, over, highlight, onToggleDon
             onClick={() => onCycleTag(section.id)}
           ><span class="tag-letter" aria-hidden="true">{section.tag ? TAG_INFO[section.tag].label[0] : ''}</span><TagIcon tag={section.tag} /></button>
           </div>
+          {!editing && ctl.onToggleSplitMode && <button class={`split-mode-btn${splitting ? ' on' : ''}`} aria-label={splitting ? 'Done splitting' : 'Split card'} aria-pressed={splitting} onClick={() => ctl.onToggleSplitMode!(section.id)}>{splitting ? 'Done' : '✂'}</button>}
           {!editing && onDelete && <button class="del-card" aria-label="Delete card" onClick={() => onDelete(section.id)}><TrashIcon /></button>}
           {!editing && <button class="edit-btn" aria-label="Edit text" onClick={() => ctl.onStartEdit(section.id)}>✎</button>}
         </div>
@@ -98,8 +106,8 @@ export function SectionView({ section, number, ctl, over, highlight, onToggleDon
         {editing ? (
           <InlineEdit initial={section.text} onSave={(t) => ctl.onSaveEdit(section.id, t)} onCancel={ctl.onCancelEdit} />
         ) : (
-          <div class="text">
-            {wordsOf(section.text).map((w, i) => (
+          <div class={`text${splitting ? ' splitting' : ''}`}>
+            {words.map((w, i) => (
               <span key={i}>
                 <span
                   class={`w${sel && i >= sel.start && i < sel.end ? ' sel' : ''}${highlight?.length && wordHit(w, highlight) ? ' hit' : ''}`}
@@ -109,6 +117,9 @@ export function SectionView({ section, number, ctl, over, highlight, onToggleDon
               </span>
             ))}
           </div>
+        )}
+        {!editing && !splitting && sel && sel.start > 0 && ctl.onSplitHere && (
+          <button class="split-here" onClick={() => ctl.onSplitHere!(section.id, sel.start)}>{`✂ Split before “${words[sel.start]}”`}</button>
         )}
       </div>
     </div>
