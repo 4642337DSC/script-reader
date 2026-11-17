@@ -22,6 +22,8 @@ interface Props {
   number: number;
   ctl: WordCtl;
   over?: boolean;
+  /** Words of the current search that appear in this card get highlighted. */
+  highlight?: string[];
   /** The coloured bar on the left: one tap toggles done. */
   onToggleDone: (id: string) => void;
   /** The location label above the text: opens the location box. */
@@ -34,6 +36,18 @@ interface Props {
   onDismissSuggestion?: (id: string) => void;
 }
 
+/** Lower-case and strip accents so "si" finds "și" and "Cadre" finds "cadre". */
+export const fold = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+const wordHit = (w: string, tokens: string[]) => { const f = fold(w); return tokens.some((t) => f.includes(t)); };
+
+function TrashIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="M6 6l1 14h10l1-14" /><path d="M10 11v6" /><path d="M14 11v6" />
+    </svg>
+  );
+}
+
 function InlineEdit({ initial, onSave, onCancel }: { initial: string; onSave: (t: string) => void; onCancel: () => void }) {
   return (
     <div class="inline-edit">
@@ -42,7 +56,7 @@ function InlineEdit({ initial, onSave, onCancel }: { initial: string; onSave: (t
   );
 }
 
-export function SectionView({ section, number, ctl, over, onToggleDone, onOpenLocation, onCycleTag, onDelete, onAcceptSuggestion, onDismissSuggestion }: Props) {
+export function SectionView({ section, number, ctl, over, highlight, onToggleDone, onOpenLocation, onCycleTag, onDelete, onAcceptSuggestion, onDismissSuggestion }: Props) {
   const suggestion = !section.location && section.suggestedLocation ? section.suggestedLocation : null;
   const sel = ctl.selection && ctl.selection.sectionId === section.id ? ctl.selection : null;
   const editing = ctl.editingId === section.id;
@@ -71,7 +85,7 @@ export function SectionView({ section, number, ctl, over, onToggleDone, onOpenLo
             onClick={() => onCycleTag(section.id)}
           ><span class="tag-letter" aria-hidden="true">{section.tag ? TAG_INFO[section.tag].label[0] : ''}</span><TagIcon tag={section.tag} /></button>
           </div>
-          {!editing && onDelete && <button class="del-card" aria-label="Delete card" onClick={() => onDelete(section.id)}>🗑</button>}
+          {!editing && onDelete && <button class="del-card" aria-label="Delete card" onClick={() => onDelete(section.id)}><TrashIcon /></button>}
           {!editing && <button class="edit-btn" aria-label="Edit text" onClick={() => ctl.onStartEdit(section.id)}>✎</button>}
         </div>
         {suggestion && (
@@ -88,7 +102,7 @@ export function SectionView({ section, number, ctl, over, onToggleDone, onOpenLo
             {wordsOf(section.text).map((w, i) => (
               <span key={i}>
                 <span
-                  class={`w${sel && i >= sel.start && i < sel.end ? ' sel' : ''}`}
+                  class={`w${sel && i >= sel.start && i < sel.end ? ' sel' : ''}${highlight?.length && wordHit(w, highlight) ? ' hit' : ''}`}
                   onClick={() => ctl.onWordClick(section.id, i)}
                   onPointerDown={(e) => ctl.onWordPointerDown(section.id, i, e as unknown as PointerEvent)}
                 >{w}</span>{' '}

@@ -149,4 +149,18 @@ html, body { margin: 0; background: #101114; color: #e8e8ea; font-family: system
 .gap-split:hover, .gap-split:active { color: #8ab4ff; }
 .merge-btn { flex: 0 0 auto; min-height: 44px; background: #22252b; color: #8ab4ff; border: 0; border-radius: 10px; padding: 0 .9rem; }
 
-.del-card { min-width: 44px; min-height: 44px; background: none; border: 0; color: #9a6a6f; font-size: 1.1rem; cursor: pointer; }
+.del-card { min-width: 44px; min-height: 44px; background: none; border: 0; color: #e5484d; font-size: 1.1rem; cursor: pointer; }
+
+.del-card { display: inline-flex; align-items: center; justify-content: center; }
+.del-card:active { color: #ff6369; }
+.tool-btn { min-width: 44px; min-height: 44px; margin-left: .25rem; background: #22252b; color: inherit; border: 0; border-radius: 8px; font-size: 1.05rem; }
+.tool-btn:disabled { opacity: .35; }
+.tool-btn.on { background: #2f5d9e; }
+.search-bar { flex: 1 1 100%; display: flex; flex-wrap: wrap; align-items: center; gap: .25rem; }
+.search-bar .inline-input { flex: 1 1 8rem; min-width: 0; }
+.search-hits { flex: 1 1 100%; display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; max-height: 6.5rem; overflow-y: auto; }
+.hit-chip { min-width: 40px; min-height: 36px; background: #2a2e36; color: inherit; border: 1px solid #444; border-radius: 999px; padding: 0 .7rem; font-weight: 700; }
+.hit-chip.cur { background: #2f5d9e; border-color: #5b8fd6; }
+.w.hit { background: #7a6a1c; border-radius: 3px; }
+.section { scroll-margin-top: 9rem; }
+.filter-note { margin: .25rem 0; }
