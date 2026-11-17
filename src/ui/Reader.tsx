@@ -81,49 +81,6 @@ export function Reader({
           <h1>{video.title}</h1>
         )}
         {onEditTitle && !editingTitle && <button class="edit-title" aria-label="Edit title" onClick={onEditTitle}>✎</button>}
-        <div class="font-ctl">
-          <button class={`tool-btn${searching ? ' on' : ''}`} aria-label="Search in video" aria-pressed={searching} onClick={() => (searching ? closeSearch() : setSearching(true))}>🔍</button>
-          <button class={`tool-btn${uncheckedOnly ? ' on' : ''}`} aria-label="Show only unchecked cards" aria-pressed={uncheckedOnly} onClick={() => setUncheckedOnly(!uncheckedOnly)}>☐</button>
-          {onUndo && <button class="undo-btn" aria-label="Undo" disabled={!canUndo} onClick={onUndo}>↶</button>}
-          <button aria-label="Smaller text" onClick={() => onFontScale(clamp(fontScale - STEP))}>A−</button>
-          <button aria-label="Larger text" onClick={() => onFontScale(clamp(fontScale + STEP))}>A+</button>
-        </div>
-        {searching && (
-          <div class="search-bar" role="search">
-            <input
-              class="inline-input"
-              type="search"
-              aria-label="Search words"
-              placeholder="Search this video"
-              autoFocus
-              value={query}
-              onInput={(e) => {
-                const v = (e.currentTarget as HTMLInputElement).value;
-                setQuery(v);
-                setCur(0);
-                const f = fold(v.trim());
-                const first = f ? visible.find((x) => fold(x.s.text).includes(f)) : undefined;
-                if (first) goTo(first.s.id);
-              }}
-              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); jump(cur + 1); } else if (e.key === 'Escape') closeSearch(); }}
-            />
-            <button class="tool-btn" aria-label="Previous match" disabled={hits.length < 2} onClick={() => jump(cur - 1)}>↑</button>
-            <button class="tool-btn" aria-label="Next match" disabled={hits.length < 2} onClick={() => jump(cur + 1)}>↓</button>
-            <button class="tool-btn" aria-label="Close search" onClick={closeSearch}>✕</button>
-            {q && (
-              <div class="search-hits" role="status">
-                {hits.length === 0 ? <span class="status">No cards contain “{query.trim()}”</span> : (
-                  <>
-                    <span class="status">{hits.length === 1 ? 'Card' : 'Cards'}:</span>
-                    {hits.map((h, k) => (
-                      <button key={h.s.id} class={`hit-chip${k === cur ? ' cur' : ''}`} aria-label={`Go to card ${h.no}`} onClick={() => jump(k)}>{h.no}</button>
-                    ))}
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-        )}
       </header>
       {uncheckedOnly && (
         <p class="status filter-note" role="status">
@@ -151,6 +108,51 @@ export function Reader({
         </div>
       ))}
       {!uncheckedOnly && <Gap index={n} over={over === `gap:${n}`} onJoin={onJoin} />}
+      <div class="bottom-bar">
+          {searching && (
+            <div class="search-bar" role="search">
+              <input
+                class="inline-input"
+                type="search"
+                aria-label="Search words"
+                placeholder="Search this video"
+                autoFocus
+                value={query}
+                onInput={(e) => {
+                  const v = (e.currentTarget as HTMLInputElement).value;
+                  setQuery(v);
+                  setCur(0);
+                  const f = fold(v.trim());
+                  const first = f ? visible.find((x) => fold(x.s.text).includes(f)) : undefined;
+                  if (first) goTo(first.s.id);
+                }}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); jump(cur + 1); } else if (e.key === 'Escape') closeSearch(); }}
+              />
+              <button class="tool-btn" aria-label="Previous match" disabled={hits.length < 2} onClick={() => jump(cur - 1)}>↑</button>
+              <button class="tool-btn" aria-label="Next match" disabled={hits.length < 2} onClick={() => jump(cur + 1)}>↓</button>
+              <button class="tool-btn" aria-label="Close search" onClick={closeSearch}>✕</button>
+              {q && (
+                <div class="search-hits" role="status">
+                  {hits.length === 0 ? <span class="status">No cards contain “{query.trim()}”</span> : (
+                    <>
+                      <span class="status">{hits.length === 1 ? 'Card' : 'Cards'}:</span>
+                      {hits.map((h, k) => (
+                        <button key={h.s.id} class={`hit-chip${k === cur ? ' cur' : ''}`} aria-label={`Go to card ${h.no}`} onClick={() => jump(k)}>{h.no}</button>
+                      ))}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+          <div class="font-ctl">
+            <button class={`tool-btn${searching ? ' on' : ''}`} aria-label="Search in video" aria-pressed={searching} onClick={() => (searching ? closeSearch() : setSearching(true))}>🔍</button>
+            <button class={`tool-btn${uncheckedOnly ? ' on' : ''}`} aria-label="Show only unchecked cards" aria-pressed={uncheckedOnly} onClick={() => setUncheckedOnly(!uncheckedOnly)}>☐</button>
+            {onUndo && <button class="undo-btn" aria-label="Undo" disabled={!canUndo} onClick={onUndo}>↶</button>}
+            <button aria-label="Smaller text" onClick={() => onFontScale(clamp(fontScale - STEP))}>A−</button>
+            <button aria-label="Larger text" onClick={() => onFontScale(clamp(fontScale + STEP))}>A+</button>
+          </div>
+      </div>
     </div>
   );
 }

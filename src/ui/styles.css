@@ -171,3 +171,13 @@ html, body { margin: 0; background: #101114; color: #e8e8ea; font-family: system
 .text.splitting .w { cursor: pointer; }
 .text.splitting span:not(:first-child) > .w { border-left: 2px dashed #8ab4ff; padding-left: 3px; margin-left: 1px; }
 .split-here { margin-top: .5rem; min-height: 48px; padding: 0 1rem; background: #1f2a3a; color: #8ab4ff; border: 0; border-radius: 10px; font-size: 1rem; }
+
+/* the controls live in a bar fixed to the bottom of the screen, so they are always in reach while scrolling */
+.reader-head { position: static; }
+.reader { padding-bottom: 9rem; }
+.section { scroll-margin-top: 1rem; scroll-margin-bottom: 9rem; }
+.bottom-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; background: #101114; border-top: 1px solid #2a2e36; padding: .4rem .75rem calc(.4rem + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: .3rem; max-width: 720px; margin: 0 auto; }
+.bottom-bar .font-ctl { justify-content: space-between; }
+.bottom-bar .font-ctl button { margin-left: 0; flex: 1 1 0; }
+.bottom-bar .search-hits { max-height: 4.5rem; }
+.bottom-bar .font-ctl .undo-btn, .bottom-bar .font-ctl .tool-btn { margin-left: 0; flex: 1 1 0; }
